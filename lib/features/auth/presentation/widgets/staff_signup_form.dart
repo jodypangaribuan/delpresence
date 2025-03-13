@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax/iconsax.dart';
 import 'dart:async';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/constants/sizes.dart';
 import '../../../../core/constants/text_strings.dart';
+import '../bloc/auth_bloc.dart';
 import 'terms_and_privacy_agreement.dart';
+import '../../../home/presentation/screens/home_screen.dart';
 
 class StaffSignupForm extends StatefulWidget {
   const StaffSignupForm({Key? key}) : super(key: key);
@@ -36,6 +39,7 @@ class _StaffSignupFormState extends State<StaffSignupForm>
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
+  bool _isLoading = false;
 
   // Dropdown state
   bool _isJabatanDropdownOpen = false;
@@ -48,12 +52,11 @@ class _StaffSignupFormState extends State<StaffSignupForm>
 
   // Jabatan fungsional options
   final List<String> _jabatanOptions = [
-    'Profesor',
-    'Lektor Kepala',
-    'Lektor',
+    'Tenaga Pengajar',
     'Asisten Ahli',
-    'Pengajar',
-    'Teaching Assistant (TA)',
+    'Lektor',
+    'Lektor Kepala',
+    'Guru Besar',
   ];
 
   @override
@@ -74,16 +77,33 @@ class _StaffSignupFormState extends State<StaffSignupForm>
       ),
     );
 
-    // Show notification popup after widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showNotificationPopup();
-    });
+    // Removed notification popup
   }
 
   void _handleJabatanFocusChange() {
     setState(() {
       _isJabatanDropdownOpen = _jabatanFocusNode.hasFocus;
     });
+  }
+
+  void _handleRegister() {
+    if (_formKey.currentState!.validate() && _agreeToTerms) {
+      final fullName = [
+        _firstNameController.text,
+        _middleNameController.text,
+        _lastNameController.text,
+      ].where((name) => name.isNotEmpty).join(' ');
+
+      context.read<AuthBloc>().add(
+            RegisterEvent(
+              nimNip: _nipController.text,
+              name: fullName,
+              email: _emailController.text,
+              password: _passwordController.text,
+              userType: 'staff',
+            ),
+          );
+    }
   }
 
   // Method to show notification popup
@@ -247,42 +267,300 @@ class _StaffSignupFormState extends State<StaffSignupForm>
       ),
     );
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.symmetric(
-        horizontal: isSmallScreen ? AppSizes.md : AppSizes.defaultSpace,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Nama Depan dan Nama Tengah (opsional) dalam satu baris
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Nama Depan - menggunakan 50% lebar
-                Expanded(
-                  flex: 1,
-                  child: TextFormField(
-                    controller: _firstNameController,
-                    decoration: inputDecoration.copyWith(
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: isSmallScreen ? AppSizes.sm : AppSizes.md,
-                        vertical: isSmallScreen ? AppSizes.sm : AppSizes.md,
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthLoading) {
+          setState(() => _isLoading = true);
+        } else {
+          setState(() => _isLoading = false);
+
+          if (state is AuthSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message ?? 'Registration successful'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            // Navigate to home screen
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const HomeScreen(),
+              ),
+              (route) => false,
+            );
+          } else if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      },
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? AppSizes.md : AppSizes.defaultSpace,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: AppSizes.spaceBtwItems),
+              // 1. Nama Depan dan Nama Tengah (opsional) dalam satu baris
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Nama Depan - menggunakan 50% lebar
+                  Expanded(
+                    flex: 1,
+                    child: TextFormField(
+                      controller: _firstNameController,
+                      decoration: inputDecoration.copyWith(
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? AppSizes.sm : AppSizes.md,
+                          vertical: isSmallScreen ? AppSizes.sm : AppSizes.md,
+                        ),
+                        labelText: 'Nama Depan',
+                        hintText: 'Nama depan',
+                        prefixIcon: Icon(
+                          Iconsax.user,
+                          color: AppColors.darkGrey,
+                          size: isSmallScreen ? 18 : 22,
+                        ),
                       ),
-                      labelText: 'Nama Depan',
-                      hintText: 'Nama depan',
-                      prefixIcon: Icon(
-                        Iconsax.user,
-                        color: AppColors.darkGrey,
-                        size: isSmallScreen ? 18 : 22,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 13 : 14,
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return AppTexts.requiredField;
+                        }
+                        return null;
+                      },
                     ),
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 13 : 14,
+                  ),
+
+                  // Spacing
+                  SizedBox(
+                      width: isSmallScreen
+                          ? AppSizes.sm
+                          : AppSizes.spaceBtwInputFields),
+
+                  // Nama Tengah (opsional) - menggunakan 50% lebar
+                  Expanded(
+                    flex: 1,
+                    child: TextFormField(
+                      controller: _middleNameController,
+                      decoration: inputDecoration.copyWith(
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? AppSizes.sm : AppSizes.md,
+                          vertical: isSmallScreen ? AppSizes.sm : AppSizes.md,
+                        ),
+                        labelText: 'Nama Tengah',
+                        hintText: 'Tengah',
+                        helperText: null,
+                        labelStyle: TextStyle(
+                          color: AppColors.darkGrey.withOpacity(0.8),
+                          fontSize: isSmallScreen ? 13 : 14,
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.user,
+                          color: AppColors.darkGrey.withOpacity(0.7),
+                          size: isSmallScreen ? 18 : 22,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppSizes.inputFieldRadius),
+                          borderSide: BorderSide(
+                              color: AppColors.grey.withOpacity(0.7)),
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 13 : 14,
+                      ),
+                      // No validator needed since it's optional
                     ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSizes.spaceBtwInputFields),
+
+              // 2. Nama Belakang
+              TextFormField(
+                controller: _lastNameController,
+                decoration: inputDecoration.copyWith(
+                  labelText: 'Nama Belakang',
+                  hintText: 'Masukkan nama belakang',
+                  prefixIcon: Icon(
+                    Iconsax.user,
+                    color: AppColors.darkGrey,
+                    size: isSmallScreen ? 18 : 22,
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return AppTexts.requiredField;
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSizes.spaceBtwInputFields),
+
+              // 3. Email (@del.ac.id)
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: inputDecoration.copyWith(
+                  labelText: 'Email Kampus',
+                  hintText: 'nama@del.ac.id',
+                  prefixIcon: Icon(
+                    Iconsax.sms,
+                    color: AppColors.darkGrey,
+                    size: isSmallScreen ? 18 : 22,
+                  ),
+                  helperText: 'Gunakan email resmi Institut Teknologi Del',
+                  helperStyle: TextStyle(
+                    color: AppColors.darkGrey.withOpacity(0.7),
+                    fontSize: isSmallScreen ? 10 : 12,
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return AppTexts.requiredField;
+                  }
+                  if (!value.endsWith('@del.ac.id')) {
+                    return 'Gunakan email dengan domain @del.ac.id';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSizes.spaceBtwInputFields),
+
+              // 4. NIP
+              TextFormField(
+                controller: _nipController,
+                keyboardType: TextInputType.text,
+                decoration: inputDecoration.copyWith(
+                  labelText: 'NIP',
+                  hintText: 'Masukkan NIP Anda',
+                  prefixIcon: Icon(
+                    Iconsax.card,
+                    color: AppColors.darkGrey,
+                    size: isSmallScreen ? 18 : 22,
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return AppTexts.requiredField;
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSizes.spaceBtwInputFields),
+
+              // 5. Jabatan Fungsional (dropdown)
+              GestureDetector(
+                onTap: () {
+                  _showJabatanBottomSheet(context);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius:
+                        BorderRadius.circular(AppSizes.inputFieldRadius),
+                    color: Colors.white,
+                    border: Border.all(color: AppColors.grey),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  height: 60, // Fixed height
+                  child: Row(
+                    children: [
+                      // Jabatan Text and Icon
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Iconsax.briefcase,
+                                color: AppColors.darkGrey,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Jabatan Fungsional',
+                                      style: TextStyle(
+                                        color: AppColors.darkGrey,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    _selectedJabatan != null
+                                        ? Text(
+                                            _selectedJabatan!,
+                                            style: TextStyle(
+                                              color: AppColors.black,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          )
+                                        : SizedBox(),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Arrow Icon
+                      Padding(
+                        padding: const EdgeInsets.only(right: 24.0),
+                        child: Icon(
+                          Icons.keyboard_arrow_down,
+                          color: AppColors.grey,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Hidden dropdown for validation and function (Jabatan)
+              Container(
+                height: 0,
+                child: Opacity(
+                  opacity: 0,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedJabatan,
+                    items: _jabatanOptions.map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedJabatan = newValue;
+                      });
+                    },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return AppTexts.requiredField;
@@ -291,407 +569,185 @@ class _StaffSignupFormState extends State<StaffSignupForm>
                     },
                   ),
                 ),
+              ),
 
-                // Spacing
-                SizedBox(
-                    width: isSmallScreen
-                        ? AppSizes.sm
-                        : AppSizes.spaceBtwInputFields),
+              const SizedBox(height: AppSizes.spaceBtwInputFields),
 
-                // Nama Tengah (opsional) - menggunakan 50% lebar
-                Expanded(
-                  flex: 1,
-                  child: TextFormField(
-                    controller: _middleNameController,
-                    decoration: inputDecoration.copyWith(
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: isSmallScreen ? AppSizes.sm : AppSizes.md,
-                        vertical: isSmallScreen ? AppSizes.sm : AppSizes.md,
-                      ),
-                      labelText:
-                          isSmallScreen ? 'Nama Tengah *' : 'Nama Tengah *',
-                      hintText: 'Tengah',
-                      helperText: null,
-                      suffixIcon: Icon(
-                        Icons.star,
-                        color: Colors.red,
-                        size: 10,
-                      ),
-                      labelStyle: TextStyle(
-                        color: AppColors.darkGrey.withOpacity(0.8),
-                        fontSize: isSmallScreen ? 13 : 14,
-                      ),
-                      prefixIcon: Icon(
-                        Iconsax.user,
-                        color: AppColors.darkGrey.withOpacity(0.7),
-                        size: isSmallScreen ? 18 : 22,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.inputFieldRadius),
-                        borderSide:
-                            BorderSide(color: AppColors.grey.withOpacity(0.7)),
-                      ),
+              // 6. Kata Sandi
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                decoration: inputDecoration.copyWith(
+                  labelText: AppTexts.password,
+                  hintText: 'Minimal 6 karakter',
+                  prefixIcon: Icon(
+                    Iconsax.password_check,
+                    color: AppColors.darkGrey,
+                    size: isSmallScreen ? 18 : 22,
+                  ),
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                    icon: Icon(
+                      _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
+                      color: AppColors.darkGrey,
+                      size: isSmallScreen ? 18 : 20,
                     ),
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 13 : 14,
-                    ),
-                    // No validator needed since it's optional
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSizes.spaceBtwInputFields),
-
-            // 2. Nama Belakang
-            TextFormField(
-              controller: _lastNameController,
-              decoration: inputDecoration.copyWith(
-                labelText: 'Nama Belakang',
-                hintText: 'Masukkan nama belakang',
-                prefixIcon: Icon(
-                  Iconsax.user,
-                  color: AppColors.darkGrey,
-                  size: isSmallScreen ? 18 : 22,
-                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return AppTexts.requiredField;
+                  }
+                  if (value.length < 6) {
+                    return AppTexts.invalidPassword;
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return AppTexts.requiredField;
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSizes.spaceBtwInputFields),
+              const SizedBox(height: AppSizes.spaceBtwInputFields),
 
-            // 3. Email (@del.ac.id)
-            TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: inputDecoration.copyWith(
-                labelText: 'Email Kampus',
-                hintText: 'nama@del.ac.id',
-                prefixIcon: Icon(
-                  Iconsax.sms,
-                  color: AppColors.darkGrey,
-                  size: isSmallScreen ? 18 : 22,
+              // 7. Konfirmasi Kata Sandi
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: _obscureConfirmPassword,
+                decoration: inputDecoration.copyWith(
+                  labelText: AppTexts.confirmPassword,
+                  hintText: 'Konfirmasi kata sandi Anda',
+                  prefixIcon: Icon(
+                    Iconsax.password_check,
+                    color: AppColors.darkGrey,
+                    size: isSmallScreen ? 18 : 22,
+                  ),
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                      });
+                    },
+                    icon: Icon(
+                      _obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye,
+                      color: AppColors.darkGrey,
+                      size: isSmallScreen ? 18 : 20,
+                    ),
+                  ),
                 ),
-                helperText: 'Gunakan email resmi Institut Teknologi Del',
-                helperStyle: TextStyle(
-                  color: AppColors.darkGrey.withOpacity(0.7),
-                  fontSize: isSmallScreen ? 10 : 12,
-                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return AppTexts.requiredField;
+                  }
+                  if (value != _passwordController.text) {
+                    return AppTexts.passwordMismatch;
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return AppTexts.requiredField;
-                }
-                if (!value.endsWith('@del.ac.id')) {
-                  return 'Gunakan email dengan domain @del.ac.id';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSizes.spaceBtwInputFields),
+              const SizedBox(height: AppSizes.spaceBtwInputFields),
 
-            // 4. NIP
-            TextFormField(
-              controller: _nipController,
-              keyboardType: TextInputType.text,
-              decoration: inputDecoration.copyWith(
-                labelText: 'NIP',
-                hintText: 'Masukkan NIP Anda',
-                prefixIcon: Icon(
-                  Iconsax.card,
-                  color: AppColors.darkGrey,
-                  size: isSmallScreen ? 18 : 22,
-                ),
+              // Syarat dan Ketentuan
+              TermsAndPrivacyAgreement(
+                value: _agreeToTerms,
+                onChanged: (value) {
+                  setState(() {
+                    _agreeToTerms = value ?? false;
+                  });
+                },
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return AppTexts.requiredField;
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSizes.spaceBtwInputFields),
+              const SizedBox(height: AppSizes.md),
 
-            // 5. Jabatan Fungsional (dropdown)
-            GestureDetector(
-              onTap: () {
-                _showJabatanBottomSheet(context);
-              },
-              child: Container(
+              // Tombol Daftar
+              Container(
+                width: double.infinity,
                 decoration: BoxDecoration(
-                  borderRadius:
-                      BorderRadius.circular(AppSizes.inputFieldRadius),
-                  color: Colors.white,
-                  border: Border.all(color: AppColors.grey),
+                  borderRadius: BorderRadius.circular(AppSizes.buttonRadius),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
+                      color: AppColors.primary.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                height: 60, // Fixed height
+                child: ElevatedButton(
+                  onPressed: _isLoading
+                      ? null
+                      : (_agreeToTerms ? _handleRegister : null),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      vertical: isSmallScreen ? AppSizes.md : AppSizes.lg,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppSizes.buttonRadius),
+                    ),
+                    elevation:
+                        0, // No elevation since we're using shadow on container
+                    disabledBackgroundColor: Colors.grey.shade300,
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          AppTexts.signUp.toUpperCase(),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                            fontSize: isSmallScreen ? 13 : 14,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: AppSizes.spaceBtwSections),
+
+              // Sudah memiliki akun
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Jabatan Text and Icon
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Iconsax.briefcase,
-                              color: AppColors.darkGrey,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'Jabatan Fungsional',
-                                    style: TextStyle(
-                                      color: AppColors.darkGrey,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  _selectedJabatan != null
-                                      ? Text(
-                                          _selectedJabatan!,
-                                          style: TextStyle(
-                                            color: AppColors.black,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        )
-                                      : SizedBox(),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    Text(
+                      AppTexts.alreadyHaveAccount,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.darkGrey,
+                            fontSize: isSmallScreen ? 11 : 12,
+                          ),
                     ),
-
-                    // Arrow Icon
-                    Padding(
-                      padding: const EdgeInsets.only(right: 24.0),
-                      child: Icon(
-                        Icons.keyboard_arrow_down,
-                        color: AppColors.grey,
-                        size: 24,
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        AppTexts.signIn,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: isSmallScreen ? 11 : 12,
+                            ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-
-            // Hidden dropdown for validation and function (Jabatan)
-            Container(
-              height: 0,
-              child: Opacity(
-                opacity: 0,
-                child: DropdownButtonFormField<String>(
-                  value: _selectedJabatan,
-                  items: _jabatanOptions.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedJabatan = newValue;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return AppTexts.requiredField;
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ),
-
-            const SizedBox(height: AppSizes.spaceBtwInputFields),
-
-            // 6. Kata Sandi
-            TextFormField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              decoration: inputDecoration.copyWith(
-                labelText: AppTexts.password,
-                hintText: 'Minimal 6 karakter',
-                prefixIcon: Icon(
-                  Iconsax.password_check,
-                  color: AppColors.darkGrey,
-                  size: isSmallScreen ? 18 : 22,
-                ),
-                suffixIcon: IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    });
-                  },
-                  icon: Icon(
-                    _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
-                    color: AppColors.darkGrey,
-                    size: isSmallScreen ? 18 : 20,
-                  ),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return AppTexts.requiredField;
-                }
-                if (value.length < 6) {
-                  return AppTexts.invalidPassword;
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSizes.spaceBtwInputFields),
-
-            // 7. Konfirmasi Kata Sandi
-            TextFormField(
-              controller: _confirmPasswordController,
-              obscureText: _obscureConfirmPassword,
-              decoration: inputDecoration.copyWith(
-                labelText: AppTexts.confirmPassword,
-                hintText: 'Konfirmasi kata sandi Anda',
-                prefixIcon: Icon(
-                  Iconsax.password_check,
-                  color: AppColors.darkGrey,
-                  size: isSmallScreen ? 18 : 22,
-                ),
-                suffixIcon: IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _obscureConfirmPassword = !_obscureConfirmPassword;
-                    });
-                  },
-                  icon: Icon(
-                    _obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye,
-                    color: AppColors.darkGrey,
-                    size: isSmallScreen ? 18 : 20,
-                  ),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return AppTexts.requiredField;
-                }
-                if (value != _passwordController.text) {
-                  return AppTexts.passwordMismatch;
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSizes.spaceBtwInputFields),
-
-            // Syarat dan Ketentuan
-            TermsAndPrivacyAgreement(
-              value: _agreeToTerms,
-              onChanged: (value) {
-                setState(() {
-                  _agreeToTerms = value ?? false;
-                });
-              },
-            ),
-            const SizedBox(height: AppSizes.spaceBtwSections),
-
-            // Tombol Daftar
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppSizes.buttonRadius),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ElevatedButton(
-                onPressed: _agreeToTerms
-                    ? () {
-                        if (_formKey.currentState!.validate()) {
-                          // Perform registration logic
-                          // You can add registration logic here
-                        }
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(
-                    vertical: isSmallScreen ? AppSizes.md : AppSizes.lg,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.buttonRadius),
-                  ),
-                  elevation:
-                      0, // No elevation since we're using shadow on container
-                  disabledBackgroundColor: Colors.grey.shade300,
-                ),
-                child: Text(
-                  AppTexts.signUp.toUpperCase(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                    fontSize: isSmallScreen ? 13 : 14,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSizes.spaceBtwItems),
-
-            // Sudah memiliki akun
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  AppTexts.alreadyHaveAccount,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkGrey,
-                        fontSize: isSmallScreen ? 11 : 12,
-                      ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    AppTexts.signIn,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: isSmallScreen ? 11 : 12,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSizes.spaceBtwItems),
-          ],
+              const SizedBox(height: AppSizes.spaceBtwItems),
+            ],
+          ),
         ),
       ),
     );
@@ -699,67 +755,158 @@ class _StaffSignupFormState extends State<StaffSignupForm>
 
   // Method untuk menampilkan bottom sheet jabatan fungsional
   void _showJabatanBottomSheet(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          color: Colors.white,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
-                  children: [
-                    Text(
-                      'Pilih Jabatan Fungsional',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.black,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: size.height * 0.5,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
                 ),
               ),
-              const Divider(),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _jabatanOptions.length,
-                  itemBuilder: (context, index) {
-                    final jabatan = _jabatanOptions[index];
-                    return ListTile(
-                      leading: Icon(
-                        Iconsax.briefcase,
-                        color: AppColors.primary.withOpacity(0.7),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
                       ),
-                      title: Text(jabatan),
-                      onTap: () {
-                        setState(() {
-                          _selectedJabatan = jabatan;
-                        });
-                        Navigator.pop(context);
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          offset: const Offset(0, 1),
+                          blurRadius: 5,
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Iconsax.briefcase,
+                                color: AppColors.primary,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Pilih Jabatan Fungsional',
+                              style: TextStyle(
+                                color: AppColors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.close,
+                              color: Colors.grey[600],
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Jabatan list
+                  Expanded(
+                    child: ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _jabatanOptions.length,
+                      itemBuilder: (context, index) {
+                        final jabatan = _jabatanOptions[index];
+                        final isSelected = _selectedJabatan == jabatan;
+
+                        return InkWell(
+                          onTap: () {
+                            // Update both local and parent state
+                            setModalState(() {
+                              _selectedJabatan = jabatan;
+                            });
+                            setState(() {
+                              _selectedJabatan = jabatan;
+                            });
+                            Navigator.pop(context);
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primary.withOpacity(0.05)
+                                  : Colors.transparent,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    jabatan,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : Colors.black87,
+                                      fontSize: 15,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w500
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: AppColors.primary,
+                                    size: 20,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
                       },
-                      trailing: _selectedJabatan == jabatan
-                          ? Icon(Icons.check, color: AppColors.primary)
-                          : null,
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

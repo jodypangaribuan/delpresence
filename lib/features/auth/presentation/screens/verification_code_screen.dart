@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/constants/sizes.dart';
-import '../../../../core/constants/text_strings.dart';
 import 'reset_password_screen.dart';
 
 class VerificationCodeScreen extends StatefulWidget {

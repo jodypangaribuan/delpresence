@@ -74,7 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSizes.defaultSpace,
-                vertical: AppSizes.md,
+                vertical: AppSizes.sm,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                           color: AppColors.black,
                         ),
                   ),
-                  const SizedBox(height: AppSizes.sm),
+                  const SizedBox(height: AppSizes.xs),
 
                   // Subtitle
                   Text(
@@ -96,7 +96,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                           color: AppColors.darkGrey,
                         ),
                   ),
-                  const SizedBox(height: AppSizes.spaceBtwItems),
+                  const SizedBox(height: AppSizes.sm),
                 ],
               ),
             ),
@@ -105,9 +105,9 @@ class _RegisterScreenState extends State<RegisterScreen>
             Container(
               margin: EdgeInsets.symmetric(
                 horizontal: isSmallScreen ? AppSizes.md : AppSizes.defaultSpace,
-                vertical: AppSizes.sm,
+                vertical: AppSizes.xs,
               ),
-              height: 80,
+              height: 70,
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(AppSizes.cardRadiusLg),
@@ -156,26 +156,30 @@ class _RegisterScreenState extends State<RegisterScreen>
 
             // Form Content
             Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _tabController.animateTo(index);
-                  });
-                },
-                children: const [
-                  // Student Form
-                  Padding(
-                    padding: EdgeInsets.only(bottom: AppSizes.md),
-                    child: StudentSignupForm(),
-                  ),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: AppSizes.sm),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height - 300,
+                      child: PageView(
+                        controller: _pageController,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _tabController.animateTo(index);
+                          });
+                        },
+                        children: const [
+                          // Student Form
+                          StudentSignupForm(),
 
-                  // Staff Form
-                  Padding(
-                    padding: EdgeInsets.only(bottom: AppSizes.md),
-                    child: StaffSignupForm(),
-                  ),
-                ],
+                          // Staff Form
+                          StaffSignupForm(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -236,4 +240,3 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 }
-  

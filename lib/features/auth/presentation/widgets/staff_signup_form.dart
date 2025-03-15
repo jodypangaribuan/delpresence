@@ -659,54 +659,49 @@ class _StaffSignupFormState extends State<StaffSignupForm>
               const SizedBox(height: AppSizes.md),
 
               // Tombol Daftar
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppSizes.buttonRadius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : (_agreeToTerms ? _handleRegister : null),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      vertical: isSmallScreen ? AppSizes.md : AppSizes.lg,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppSizes.buttonRadius),
-                    ),
-                    elevation:
-                        0, // No elevation since we're using shadow on container
-                    disabledBackgroundColor: Colors.grey.shade300,
+              ElevatedButton(
+                onPressed: _isLoading
+                    ? null
+                    : () {
+                        if (_agreeToTerms) {
+                          _handleRegister();
+                        } else {
+                          // Tampilkan pesan jika terms belum dicentang
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Anda harus menyetujui syarat dan ketentuan terlebih dahulu'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _agreeToTerms
+                      ? AppColors.primary
+                      : AppColors.primary.withOpacity(0.3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: _isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          AppTexts.signUp.toUpperCase(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                            fontSize: isSmallScreen ? 13 : 14,
-                          ),
-                        ),
+                  minimumSize: const Size(double.infinity, 56),
                 ),
+                child: _isLoading
+                    ? SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        AppTexts.signUp.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
               ),
               const SizedBox(height: AppSizes.spaceBtwSections),
 

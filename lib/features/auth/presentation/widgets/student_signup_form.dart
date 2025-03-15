@@ -843,7 +843,22 @@ class _StudentSignupFormState extends State<StudentSignupForm>
 
                 // Tombol Daftar
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _handleRegister,
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          if (_agreeToTerms) {
+                            _handleRegister();
+                          } else {
+                            // Tampilkan pesan jika terms belum dicentang
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Anda harus menyetujui syarat dan ketentuan terlebih dahulu'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _agreeToTerms
                         ? AppColors.primary
@@ -864,7 +879,7 @@ class _StudentSignupFormState extends State<StudentSignupForm>
                           ),
                         )
                       : Text(
-                          AppTexts.signUp,
+                          AppTexts.signUp.toUpperCase(),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

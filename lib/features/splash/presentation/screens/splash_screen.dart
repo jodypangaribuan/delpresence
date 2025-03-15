@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
+import '../../../../core/constants/colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -68,23 +69,23 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 8),
               RichText(
-                text: const TextSpan(
-                  style: TextStyle(
+                text: TextSpan(
+                  style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.0,
                   ),
                   children: [
-                    TextSpan(
+                    const TextSpan(
                       text: 'Del',
                       style: TextStyle(
-                        color: Color(0xFF041148),
+                        color: Color(0xFF051349),
                       ),
                     ),
                     TextSpan(
                       text: 'Presence',
                       style: TextStyle(
-                        color: Color.fromARGB(255, 2, 78, 108),
+                        color: AppColors.primary,
                       ),
                     ),
                   ],

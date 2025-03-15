@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/constants/sizes.dart';
 import 'reset_password_screen.dart';
@@ -39,6 +40,11 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
     }
   }
 
+  // Method to close keyboard
+  void _unfocusKeyboard() {
+    FocusScope.of(context).unfocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Set status bar color to match app theme
@@ -49,167 +55,188 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
       ),
     );
 
-    return Scaffold(
-      backgroundColor: AppColors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-        ),
-        leading: IconButton(
-          icon: const Icon(Iconsax.arrow_left, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Container(
-            padding: const EdgeInsets.all(AppSizes.defaultSpace),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title
-                Text(
-                  'OTP Verification',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.black,
-                      ),
-                ),
-                const SizedBox(height: AppSizes.sm),
+    // Get screen dimensions
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-                // Subtitle
-                Text(
-                  'Enter the 4-digit code sent to your email address',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.darkGrey,
-                      ),
-                ),
-                const SizedBox(height: AppSizes.spaceBtwSections),
+    return GestureDetector(
+      // Close keyboard when tapping anywhere on the screen
+      onTap: _unfocusKeyboard,
+      child: Scaffold(
+        backgroundColor: AppColors.white,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          systemOverlayStyle: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.dark,
+          ),
+          leading: IconButton(
+            icon: const Icon(Iconsax.arrow_left, color: Colors.black),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Container(
+              padding: const EdgeInsets.all(AppSizes.defaultSpace),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // SVG Illustration centered - positioned above the title
+                  Center(
+                    child: SvgPicture.asset(
+                      'assets/images/background/otp-verification.svg',
+                      height: screenHeight * 0.35,
+                      width: screenWidth * 0.9,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
 
-                // OTP Fields
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: List.generate(
-                    4,
-                    (index) => SizedBox(
-                      width: 64,
-                      child: TextFormField(
-                        controller: _controllers[index],
-                        focusNode: _focusNodes[index],
-                        onChanged: (value) => _onCodeChanged(value, index),
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.black,
-                                ),
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        inputFormatters: [
-                          LengthLimitingTextInputFormatter(1),
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                                AppSizes.inputFieldRadius),
+                  // Title
+                  Text(
+                    'OTP Verification',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.black,
+                        ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+
+                  // Subtitle
+                  Text(
+                    'Enter the 4-digit code sent to your email address',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.darkGrey,
+                        ),
+                  ),
+                  const SizedBox(height: AppSizes.spaceBtwSections),
+
+                  // OTP Fields
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: List.generate(
+                      4,
+                      (index) => SizedBox(
+                        width: 64,
+                        child: TextFormField(
+                          controller: _controllers[index],
+                          focusNode: _focusNodes[index],
+                          onChanged: (value) => _onCodeChanged(value, index),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.black,
+                              ),
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(1),
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                  AppSizes.inputFieldRadius),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                  AppSizes.inputFieldRadius),
+                              borderSide: BorderSide(color: AppColors.grey),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                  AppSizes.inputFieldRadius),
+                              borderSide: BorderSide(color: AppColors.primary),
+                            ),
+                            filled: true,
+                            fillColor: AppColors.lightGrey.withOpacity(0.1),
+                            counterText: '',
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                                AppSizes.inputFieldRadius),
-                            borderSide: BorderSide(color: AppColors.grey),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                                AppSizes.inputFieldRadius),
-                            borderSide: BorderSide(color: AppColors.primary),
-                          ),
-                          filled: true,
-                          fillColor: AppColors.lightGrey.withOpacity(0.1),
-                          counterText: '',
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSizes.spaceBtwSections),
+                  const SizedBox(height: AppSizes.spaceBtwSections),
 
-                // Resend Code Timer
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Code expires in: ',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.darkGrey,
-                          ),
-                    ),
-                    Text(
-                      '01:30',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSizes.sm),
+                  // Resend Code Timer
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Code expires in: ',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.darkGrey,
+                            ),
+                      ),
+                      Text(
+                        '01:30',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSizes.sm),
 
-                // Resend Code Button
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      // Resend code logic here
-                    },
-                    child: Text(
-                      'Resend Code',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            decoration: TextDecoration.underline,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
+                  // Resend Code Button
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        // Resend code logic here
+                      },
+                      child: Text(
+                        'Resend Code',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              decoration: TextDecoration.underline,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSizes.spaceBtwSections),
+                  const SizedBox(height: AppSizes.spaceBtwSections),
 
-                // Verify Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Navigate to reset password screen
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ResetPasswordScreen(),
+                  // Verify Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // Navigate to reset password screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ResetPasswordScreen(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppSizes.buttonRadius),
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.buttonRadius),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: AppSizes.buttonHeight),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: AppSizes.buttonHeight),
-                    ),
-                    child: Text(
-                      'VERIFY'.toUpperCase(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
+                      child: Text(
+                        'VERIFY'.toUpperCase(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

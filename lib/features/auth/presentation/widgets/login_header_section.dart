@@ -18,10 +18,11 @@ class LoginHeaderSection extends StatelessWidget {
           child: Center(
             child: Image.asset(
               'assets/images/logo.png',
-              height: 150,
+              height: 145,
             ),
           ),
         ),
+        const SizedBox(height: AppSizes.defaultSpace),
 
         // Title dengan style yang diperbaiki
         Padding(

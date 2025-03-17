@@ -1,16 +1,30 @@
 import '../../data/models/auth_response_model.dart';
 
 abstract class AuthRepository {
-  Future<AuthResponseModel> register({
-    required String nimNip,
-    required String name,
+  Future<AuthResponseModel> registerStudent({
+    required String nim,
+    required String firstName,
+    String? middleName,
+    String? lastName,
     required String email,
     required String password,
-    required String userType,
+    required String major,
+    required String faculty,
+    required String batch,
+  });
+
+  Future<AuthResponseModel> registerLecture({
+    required String nip,
+    required String firstName,
+    String? middleName,
+    String? lastName,
+    required String email,
+    required String password,
+    required String position,
   });
 
   Future<AuthResponseModel> login({
-    required String nimNip,
+    required String loginId,
     required String password,
   });
 

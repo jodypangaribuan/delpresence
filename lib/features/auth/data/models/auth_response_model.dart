@@ -1,3 +1,5 @@
+import 'student_model.dart';
+import 'lecture_model.dart';
 import 'user_model.dart';
 
 class AuthResponseModel {
@@ -21,32 +23,42 @@ class AuthResponseModel {
 }
 
 class AuthDataModel {
-  final UserModel user;
+  final dynamic user;
+  final String userType;
   final TokensModel? tokens;
 
   AuthDataModel({
     required this.user,
+    required this.userType,
     this.tokens,
   });
 
   factory AuthDataModel.fromJson(Map<String, dynamic> json) {
-    try {
-      // Pastikan json['user'] adalah Map<String, dynamic>
-      if (json['user'] == null || !(json['user'] is Map<String, dynamic>)) {
-        throw FormatException('Invalid user data format');
-      }
+    // Extract user data based on user_type
+    final userType = json['user_type'] as String? ?? '';
+    dynamic user;
 
-      return AuthDataModel(
-        user: UserModel.fromJson(json['user']),
-        tokens: json['tokens'] != null
-            ? TokensModel.fromJson(json['tokens'])
-            : null,
-      );
-    } catch (e) {
-      // Log error dan rethrow untuk penanganan di level yang lebih tinggi
-      print('Error parsing AuthDataModel: $e');
-      rethrow;
+    if (json.containsKey('user') && json['user'] != null) {
+      if (userType == 'student') {
+        user = StudentModel.fromJson(json['user'] as Map<String, dynamic>);
+      } else if (userType == 'lecture') {
+        user = LectureModel.fromJson(json['user'] as Map<String, dynamic>);
+      } else {
+        user = UserModel.fromJson(json['user'] as Map<String, dynamic>);
+      }
     }
+
+    // Extract tokens if available
+    TokensModel? tokens;
+    if (json.containsKey('tokens') && json['tokens'] != null) {
+      tokens = TokensModel.fromJson(json['tokens'] as Map<String, dynamic>);
+    }
+
+    return AuthDataModel(
+      user: user,
+      userType: userType,
+      tokens: tokens,
+    );
   }
 }
 
@@ -54,11 +66,13 @@ class TokensModel {
   final String accessToken;
   final String refreshToken;
   final int expiresIn;
+  final String tokenType;
 
   TokensModel({
     required this.accessToken,
     required this.refreshToken,
     required this.expiresIn,
+    required this.tokenType,
   });
 
   factory TokensModel.fromJson(Map<String, dynamic> json) {
@@ -66,6 +80,7 @@ class TokensModel {
       accessToken: json['access_token'] as String,
       refreshToken: json['refresh_token'] as String,
       expiresIn: json['expires_in'] as int,
+      tokenType: json['token_type'] as String? ?? 'Bearer',
     );
   }
 }

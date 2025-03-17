@@ -95,22 +95,30 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<AuthResponseModel> register({
-    required String nimNip,
-    required String name,
+  Future<AuthResponseModel> registerStudent({
+    required String nim,
+    required String firstName,
+    String? middleName,
+    String? lastName,
     required String email,
     required String password,
-    required String userType,
+    required String major,
+    required String faculty,
+    required String batch,
   }) async {
     try {
       final response = await _networkService.post<dynamic>(
-        '/auth/register',
+        '/auth/register/student',
         body: {
-          'nim_nip': nimNip,
-          'name': name,
+          'nim': nim,
+          'first_name': firstName,
+          'middle_name': middleName,
+          'last_name': lastName,
           'email': email,
           'password': password,
-          'user_type': userType,
+          'major': major,
+          'faculty': faculty,
+          'batch': batch,
         },
       );
 
@@ -125,7 +133,50 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return authResponse;
     } catch (e, stackTrace) {
-      ApiLogger.logError('/auth/register', e, stackTrace);
+      ApiLogger.logError('/auth/register/student', e, stackTrace);
+      return AuthResponseModel(
+        success: false,
+        message: 'Registration failed: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
+  Future<AuthResponseModel> registerLecture({
+    required String nip,
+    required String firstName,
+    String? middleName,
+    String? lastName,
+    required String email,
+    required String password,
+    required String position,
+  }) async {
+    try {
+      final response = await _networkService.post<dynamic>(
+        '/auth/register/lecture',
+        body: {
+          'nip': nip,
+          'first_name': firstName,
+          'middle_name': middleName,
+          'last_name': lastName,
+          'email': email,
+          'password': password,
+          'position': position,
+        },
+      );
+
+      final authResponse = _handleApiResponse(response);
+
+      if (authResponse.success && authResponse.data?.tokens != null) {
+        await _saveTokens(
+          authResponse.data!.tokens!.accessToken,
+          authResponse.data!.tokens!.refreshToken,
+        );
+      }
+
+      return authResponse;
+    } catch (e, stackTrace) {
+      ApiLogger.logError('/auth/register/lecture', e, stackTrace);
       return AuthResponseModel(
         success: false,
         message: 'Registration failed: ${e.toString()}',
@@ -135,14 +186,14 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthResponseModel> login({
-    required String nimNip,
+    required String loginId,
     required String password,
   }) async {
     try {
       final response = await _networkService.post<dynamic>(
         '/auth/login',
         body: {
-          'nim_nip': nimNip,
+          'login_id': loginId,
           'password': password,
         },
       );
@@ -199,10 +250,19 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<AuthResponseModel> logout() async {
     try {
+      final refreshToken = await _prefs.getString('refresh_token');
+      if (refreshToken == null) {
+        // If no refresh token, just clear local tokens
+        await _clearTokens();
+        return AuthResponseModel(
+            success: true, message: 'Logged out successfully');
+      }
+
       final headers = await _getAuthHeaders();
       final response = await _networkService.post<dynamic>(
         '/auth/logout',
         headers: headers,
+        body: {'refresh_token': refreshToken},
       );
 
       await _clearTokens();

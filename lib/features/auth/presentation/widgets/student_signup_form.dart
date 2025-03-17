@@ -134,13 +134,40 @@ class _StudentSignupFormState extends State<StudentSignupForm>
         _lastNameController.text,
       ].where((name) => name.isNotEmpty).join(' ');
 
+      // Mendapatkan fakultas berdasarkan prodi yang dipilih
+      String? faculty;
+      if (_selectedProdi != null &&
+          _prodiToFakultas.containsKey(_selectedProdi)) {
+        faculty = _prodiToFakultas[_selectedProdi];
+      }
+
+      if (faculty == null ||
+          _selectedProdi == null ||
+          _selectedAngkatan == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Harap lengkapi semua field yang diperlukan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       context.read<AuthBloc>().add(
-            RegisterEvent(
-              nimNip: _nimController.text,
-              name: fullName,
+            RegisterStudentEvent(
+              nim: _nimController.text,
+              firstName: _firstNameController.text,
+              middleName: _middleNameController.text.isEmpty
+                  ? null
+                  : _middleNameController.text,
+              lastName: _lastNameController.text.isEmpty
+                  ? null
+                  : _lastNameController.text,
               email: _emailController.text,
               password: _passwordController.text,
-              userType: 'student',
+              faculty: faculty,
+              major: _selectedProdi!,
+              batch: _selectedAngkatan!,
             ),
           );
     }

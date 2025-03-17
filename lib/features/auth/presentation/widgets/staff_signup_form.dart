@@ -94,13 +94,29 @@ class _StaffSignupFormState extends State<StaffSignupForm>
         _lastNameController.text,
       ].where((name) => name.isNotEmpty).join(' ');
 
+      if (_selectedJabatan == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Harap pilih jabatan fungsional'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       context.read<AuthBloc>().add(
-            RegisterEvent(
-              nimNip: _nipController.text,
-              name: fullName,
+            RegisterLectureEvent(
+              nip: _nipController.text,
+              firstName: _firstNameController.text,
+              middleName: _middleNameController.text.isEmpty
+                  ? null
+                  : _middleNameController.text,
+              lastName: _lastNameController.text.isEmpty
+                  ? null
+                  : _lastNameController.text,
               email: _emailController.text,
               password: _passwordController.text,
-              userType: 'staff',
+              position: _selectedJabatan!,
             ),
           );
     }

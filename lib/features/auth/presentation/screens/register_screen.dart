@@ -4,7 +4,6 @@ import 'package:iconsax/iconsax.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/constants/sizes.dart';
-import '../../../../core/constants/text_strings.dart';
 import '../widgets/student_signup_form.dart';
 import '../widgets/staff_signup_form.dart';
 
@@ -174,6 +173,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 360;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -182,83 +182,70 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       child: WillPopScope(
         onWillPop: () async {
-          return true; // Allow back navigation
+          return true;
         },
         child: Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: Colors.transparent,
+          extendBodyBehindAppBar: true,
+          resizeToAvoidBottomInset: false,
           body: Stack(
+            fit: StackFit.expand,
             children: [
-              // Background layer - just a plain white screen
+              // Background layer for intro screen only
               Positioned.fill(
+                child: Image.asset(
+                  'assets/images/background/register-background.png',
+                  width: screenWidth,
+                  height: screenHeight,
+                  fit: BoxFit.cover,
+                ),
+              ),
+
+              // White background for form page (only visible when _isFormPage is true)
+              AnimatedOpacity(
+                opacity: _isFormPage ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
                 child: Container(
+                  width: double.infinity,
+                  height: double.infinity,
                   color: Colors.white,
                 ),
               ),
 
-              // Main register screen with gesture detector - using Transform instead of Positioned
+              // Main register screen with gesture detector
               Transform.translate(
                 offset: Offset(_dragDistance, 0),
                 child: SizedBox(
-                  width: screenWidth, // Ensure full width
-                  height: screenHeight, // Ensure full height
+                  width: screenWidth,
+                  height: screenHeight,
                   child: GestureDetector(
                     onHorizontalDragStart: _handleHorizontalDragStart,
                     onHorizontalDragUpdate: _handleHorizontalDragUpdate,
                     onHorizontalDragEnd: _handleHorizontalDragEnd,
                     onTap: _unfocusKeyboard,
-                    child: Material(
-                      elevation: 8,
-                      color: Colors.white,
-                      shadowColor: Colors.black.withOpacity(0.2),
-                      child: Scaffold(
-                        backgroundColor: Colors.white,
-                        extendBodyBehindAppBar: true,
-                        appBar: _isFormPage
-                            ? null
-                            : PreferredSize(
-                                preferredSize: Size.fromHeight(kToolbarHeight),
-                                child: Container(
-                                  color: Colors.transparent,
-                                  child: AppBar(
-                                    elevation: 0,
-                                    backgroundColor: Colors.transparent,
-                                    systemOverlayStyle:
-                                        const SystemUiOverlayStyle(
-                                      statusBarColor: Colors.transparent,
-                                      statusBarIconBrightness: Brightness.dark,
-                                    ),
-                                    automaticallyImplyLeading: false,
-                                  ),
-                                ),
-                              ),
-                        body: Container(
-                          color: Colors.white,
-                          child: PageView(
-                            controller: _mainPageController,
-                            scrollDirection: Axis.vertical,
-                            physics: const ClampingScrollPhysics(),
-                            onPageChanged: (index) {
-                              _unfocusKeyboard();
-                              setState(() {
-                                _isFormPage = index == 1;
-                              });
-                              SystemChrome.setSystemUIOverlayStyle(
-                                const SystemUiOverlayStyle(
-                                  statusBarColor: Colors.transparent,
-                                  statusBarIconBrightness: Brightness.dark,
-                                ),
-                              );
-                            },
-                            children: [
-                              // First Page - Intro screen
-                              _buildIntroPage(context, screenHeight),
-
-                              // Second Page - Form Screen (Fullscreen)
-                              _buildFormPage(context, isSmallScreen),
-                            ],
+                    child: PageView(
+                      controller: _mainPageController,
+                      scrollDirection: Axis.vertical,
+                      physics: const ClampingScrollPhysics(),
+                      onPageChanged: (index) {
+                        _unfocusKeyboard();
+                        setState(() {
+                          _isFormPage = index == 1;
+                        });
+                        SystemChrome.setSystemUIOverlayStyle(
+                          const SystemUiOverlayStyle(
+                            statusBarColor: Colors.transparent,
+                            statusBarIconBrightness: Brightness.dark,
                           ),
-                        ),
-                      ),
+                        );
+                      },
+                      children: [
+                        // First Page - Intro screen
+                        _buildIntroPage(context, screenHeight),
+
+                        // Second Page - Form Screen - adding status bar height
+                        _buildFormPage(context, isSmallScreen, statusBarHeight),
+                      ],
                     ),
                   ),
                 ),
@@ -273,212 +260,207 @@ class _RegisterScreenState extends State<RegisterScreen>
   // Intro page with swipe up indicator
   Widget _buildIntroPage(BuildContext context, double screenHeight) {
     return Material(
-      color: Colors.white,
-      child: SafeArea(
-        child: Container(
-          color: Colors.white,
-          child: Column(
-            children: [
-              // Main content - SVG illustration centered
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // SVG illustration - no fade animations
-                      SvgPicture.asset(
-                        'assets/images/background/sign-up.svg',
-                        height: screenHeight * 0.4,
-                        width: MediaQuery.of(context).size.width * 0.9,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: AppSizes.lg),
+      color: Colors.transparent,
+      child: Column(
+        children: [
+          // Status bar spacer - transparent
+          SizedBox(height: MediaQuery.of(context).padding.top),
 
-                      // Title - no fade animations
-                      Text(
-                        "Bergabung dengan DelPresence",
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.black,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: AppSizes.sm),
+          // Main content - SVG illustration centered
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // SVG illustration
+                  Image.asset(
+                    'assets/images/background/sign-up.png',
+                    height: screenHeight * 0.4,
+                    width: MediaQuery.of(context).size.width * 0.9,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: AppSizes.lg),
 
-                      // Subtitle - no fade animations
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppSizes.defaultSpace),
-                        child: Text(
-                          "Buat akun untuk absensi lebih mudah dan terorganisir",
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.darkGrey,
-                                  ),
-                          textAlign: TextAlign.center,
+                  // Title
+                  Text(
+                    "Bergabung dengan DelPresence",
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.black,
                         ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+
+                  // Subtitle
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSizes.defaultSpace),
+                    child: Text(
+                      "Buat akun untuk absensi lebih mudah dan terorganisir",
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.black,
+                            fontWeight: FontWeight.w300,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Bottom swipe indicator
+          Container(
+            margin: const EdgeInsets.only(bottom: AppSizes.md),
+            height: 80,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Combined animations: slide up/down and pulse
+                SlideTransition(
+                  position: _swipeAnimation,
+                  child: ScaleTransition(
+                    scale: _pulseAnimation,
+                    child: SvgPicture.asset(
+                      'assets/icons/swipe-up.svg',
+                      height: 45,
+                      width: 45,
+                      colorFilter: ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-
-              // Bottom swipe indicator with SVG and animation
-              Container(
-                margin: const EdgeInsets.only(bottom: AppSizes.lg),
-                child: Column(
-                  children: [
-                    // Combined animations: slide up/down and pulse
-                    SlideTransition(
-                      position: _swipeAnimation,
-                      child: ScaleTransition(
-                        scale: _pulseAnimation,
-                        child: SvgPicture.asset(
-                          'assets/icons/swipe-up.svg',
-                          height: 45,
-                          width: 45,
-                          colorFilter: ColorFilter.mode(
-                            AppColors.primary,
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                        height: 4), // Reduced gap between icon and text
-                    Text(
-                      "Geser ke atas untuk mendaftar",
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.normal,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  "Geser ke atas untuk mendaftar",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.normal,
+                    fontSize: 15,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // Form page with tabs - modify method to remove fade animations
-  Widget _buildFormPage(BuildContext context, bool isSmallScreen) {
-    // Get the MediaQuery to adjust for fullscreen
-    final mediaQuery = MediaQuery.of(context);
-    final paddingTop = mediaQuery.padding.top;
-
+  // Form page with tabs
+  Widget _buildFormPage(
+      BuildContext context, bool isSmallScreen, double statusBarHeight) {
     return Material(
-      color: Colors.white, // Menggunakan warna putih murni yang solid
-      child: Container(
-        color: Colors.white, // Ensure consistent background color
-        child: Column(
-          children: [
-            // Custom AppBar without back button
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.only(
-                top: paddingTop + AppSizes.sm, // Add status bar height padding
-                left: AppSizes.defaultSpace,
-                right: AppSizes.defaultSpace,
-                bottom: AppSizes.sm,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title - no animation
-                  Text(
-                    "Formulir Pendaftaran",
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.black,
-                        ),
-                  ),
-                  const SizedBox(height: AppSizes.xs),
-
-                  // Subtitle - no animation
-                  Text(
-                    "Pilih jenis pengguna dan lengkapi informasi Anda",
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.darkGrey,
-                        ),
-                  ),
-                ],
-              ),
+      color: Colors.white,
+      child: Column(
+        children: [
+          // Custom AppBar with proper status bar height
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              top: statusBarHeight + AppSizes.sm,
+              left: AppSizes.defaultSpace,
+              right: AppSizes.defaultSpace,
+              bottom: AppSizes.sm,
             ),
-
-            // Role Selection Tabs
-            Container(
-              margin: EdgeInsets.symmetric(
-                horizontal: isSmallScreen ? AppSizes.md : AppSizes.defaultSpace,
-                vertical: AppSizes.md,
-              ),
-              height: 70,
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(AppSizes.cardRadiusLg),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppSizes.cardRadiusLg),
-                child: Row(
-                  children: [
-                    // Mahasiswa Tab
-                    _buildRoleTab(
-                      context: context,
-                      index: 0,
-                      icon: Iconsax.user,
-                      label: "Mahasiswa",
-                      isSmallScreen: isSmallScreen,
-                    ),
-
-                    // Divider
-                    Container(
-                      width: 1,
-                      height: 50,
-                      color: AppColors.grey.withOpacity(0.3),
-                    ),
-
-                    // Dosen/Staff Tab
-                    _buildRoleTab(
-                      context: context,
-                      index: 1,
-                      icon: Iconsax.teacher,
-                      label: "Dosen/TA",
-                      isSmallScreen: isSmallScreen,
-                    ),
-                  ],
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Text(
+                  "Formulir Pendaftaran",
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.black,
+                      ),
+                ),
+                const SizedBox(height: AppSizes.xs),
+
+                // Subtitle
+                Text(
+                  "Pilih jenis pengguna dan lengkapi informasi Anda",
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.darkGrey,
+                      ),
+                ),
+              ],
+            ),
+          ),
+
+          // Role Selection Tabs
+          Container(
+            margin: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? AppSizes.md : AppSizes.defaultSpace,
+              vertical: AppSizes.md,
+            ),
+            height: 70,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppSizes.cardRadiusLg),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppSizes.cardRadiusLg),
+              child: Row(
+                children: [
+                  // Mahasiswa Tab
+                  _buildRoleTab(
+                    context: context,
+                    index: 0,
+                    icon: Iconsax.user,
+                    label: "Mahasiswa",
+                    isSmallScreen: isSmallScreen,
+                  ),
+
+                  // Divider
+                  Container(
+                    width: 1,
+                    height: 50,
+                    color: AppColors.grey.withOpacity(0.3),
+                  ),
+
+                  // Dosen/Staff Tab
+                  _buildRoleTab(
+                    context: context,
+                    index: 1,
+                    icon: Iconsax.teacher,
+                    label: "Dosen/TA",
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ],
               ),
             ),
+          ),
 
-            // Form Content
-            Expanded(
+          // Form Content
+          Expanded(
+            child: Container(
+              color: Colors.white,
               child: GestureDetector(
-                onTap:
-                    _unfocusKeyboard, // Menutup keyboard saat tap di luar field
+                onTap: _unfocusKeyboard,
                 child: PageView(
                   controller: _formPageController,
                   onPageChanged: (index) {
-                    _unfocusKeyboard(); // Menutup keyboard saat halaman form berubah
+                    _unfocusKeyboard();
                     setState(() {
                       _tabController.animateTo(index);
                     });
@@ -493,8 +475,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/sizes.dart';
 import '../widgets/login_form_section.dart';
 import '../widgets/login_header_section.dart';

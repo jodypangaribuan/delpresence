@@ -318,12 +318,13 @@ class _StudentSignupFormState extends State<StudentSignupForm>
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
 
+    // Input decoration theme
     final inputDecoration = InputDecoration(
       filled: true,
       fillColor: Colors.white,
       contentPadding: EdgeInsets.symmetric(
-        horizontal: AppSizes.md,
-        vertical: isSmallScreen ? AppSizes.sm : AppSizes.md,
+        horizontal: isSmallScreen ? 12 : 16,
+        vertical: isSmallScreen ? 15 : 16,
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSizes.inputFieldRadius),
@@ -335,21 +336,24 @@ class _StudentSignupFormState extends State<StudentSignupForm>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSizes.inputFieldRadius),
-        borderSide: BorderSide(color: AppColors.primary, width: 2),
+        borderSide: BorderSide(color: AppColors.primary, width: 1.2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSizes.inputFieldRadius),
-        borderSide: BorderSide(color: AppColors.error),
+        borderSide: const BorderSide(color: Colors.red, width: 1.0),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppSizes.inputFieldRadius),
+        borderSide: const BorderSide(color: Colors.red, width: 1.2),
+      ),
+      hintStyle: TextStyle(
+        color: AppColors.grey,
+        fontSize: isSmallScreen ? 13 : 14,
       ),
       labelStyle: TextStyle(
         color: AppColors.darkGrey,
         fontSize: isSmallScreen ? 13 : 14,
       ),
-      hintStyle: TextStyle(
-        color: AppColors.darkGrey.withOpacity(0.7),
-        fontSize: isSmallScreen ? 12 : 14,
-      ),
-      errorMaxLines: 5, // Allow multiple lines for error messages
     );
 
     return BlocListener<AuthBloc, AuthState>(
@@ -360,19 +364,68 @@ class _StudentSignupFormState extends State<StudentSignupForm>
           setState(() => _isLoading = false);
 
           if (state is AuthSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'Registration successful'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            // Navigate to home screen
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const HomeScreen(),
-              ),
-              (route) => false,
+            // Show success dialog with email verification message
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 28,
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Pendaftaran Berhasil',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Akun Anda telah berhasil dibuat.',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        'Silakan periksa email Anda untuk melakukan verifikasi sebelum login.',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context); // Close dialog
+
+                        // Navigate to login screen
+                        Navigator.of(context)
+                            .popUntil((route) => route.isFirst);
+                      },
+                      child: Text(
+                        'OK',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                );
+              },
             );
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(

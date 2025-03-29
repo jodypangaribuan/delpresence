@@ -11,41 +11,44 @@ class LoginHeaderSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Logo dengan ukuran lebih besar dan posisi di tengah
+        // Logo di tengah
         Container(
-          margin: const EdgeInsets.only(bottom: AppSizes.spaceBtwItems * 1.5),
+          margin: const EdgeInsets.only(bottom: AppSizes.spaceBtwItems),
           width: double.infinity,
-          child: Center(
-            child: Image.asset(
-              'assets/images/logo.png',
-              height: 145,
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSizes.defaultSpace),
-
-        // Title dengan style yang diperbaiki
-        Padding(
-          padding: const EdgeInsets.only(bottom: AppSizes.sm),
-          child: Text(
-            AppTexts.loginTitle,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.black,
-                  fontSize: 30,
-                ),
+          alignment: Alignment.center,
+          child: Image.asset(
+            'assets/images/logo.png',
+            height: 150,
           ),
         ),
 
-        // Subtitle dengan style yang diperbaiki
-        Text(
-          AppTexts.loginSubtitle,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.darkGrey,
-                fontSize: 16,
+        const SizedBox(height: 32),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Selamat Datang!",
+              textAlign: TextAlign.left,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF002655),
               ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Silahkan masuk untuk memulai presensi hari ini!",
+              textAlign: TextAlign.left,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+                height: 1.4,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: AppSizes.spaceBtwSections),
+
+        const SizedBox(height: AppSizes.defaultSpace),
       ],
     );
   }

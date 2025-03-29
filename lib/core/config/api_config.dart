@@ -11,7 +11,7 @@ class ApiConfig {
 
   // API configuration constants
   static const String DEFAULT_BASE_URL =
-      'https://e060-2404-c0-5610-00-69-db08.ngrok-free.app/api/v1';
+      'https://e856-103-167-217-200.ngrok-free.app/api/v1';
   static const int DEFAULT_TIMEOUT = 30;
   static const String API_VERSION = 'v1';
   static const bool DEFAULT_ENABLE_LOGGING = true;
@@ -71,3 +71,5 @@ class ApiConfig {
         'X-Platform': 'flutter',
       };
 }
+
+// Berandai-andai atau Anggap saja fitur login dan register sudah ada dan halaman homepage sudah ada, dan saya ingin mengisi tabel Module "Attendance" dengan sub module "Doseen Generate QR", "mahasiswa scan QR untuk absen", "mahasiswa melakukan face recognition untuk absen", buatkan beberapa testcase untuk menguji ketiga fitur tersebut buat dalam tabel: No, Module, Sub Module, Test Case ID, Test Scenario, Type, Precondition, Steps, Expected Result, Actual Result

@@ -4,7 +4,6 @@ import 'package:iconsax/iconsax.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/constants/sizes.dart';
-import '../../../../core/constants/text_strings.dart';
 import '../screens/verification_code_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -15,10 +14,21 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  // Form key and controllers
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  bool _isLoading = false;
+
   // Swipe back animation variables
   double _dragStartX = 0.0;
   double _dragDistance = 0.0;
   bool _isDraggingHorizontally = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
 
   // Handle the swipe back gesture
   void _handleHorizontalDragStart(DragStartDetails details) {
@@ -63,6 +73,29 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     FocusScope.of(context).unfocus();
   }
 
+  void _handleSubmit() {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Simulate API call
+      Future.delayed(const Duration(seconds: 1), () {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Navigate to verification code screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const VerificationCodeScreen(),
+          ),
+        );
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Set status bar color to match app theme
@@ -77,6 +110,44 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
+    // Configure input decoration similar to login page
+    final inputDecoration = InputDecoration(
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.md,
+        vertical: AppSizes.md + 2,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppSizes.inputFieldRadius),
+        borderSide: BorderSide(color: AppColors.grey),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppSizes.inputFieldRadius),
+        borderSide: BorderSide(color: AppColors.grey.withOpacity(0.7)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppSizes.inputFieldRadius),
+        borderSide: BorderSide(color: AppColors.primary, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppSizes.inputFieldRadius),
+        borderSide: BorderSide(color: AppColors.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppSizes.inputFieldRadius),
+        borderSide: BorderSide(color: AppColors.error, width: 2),
+      ),
+      errorStyle: TextStyle(
+        color: AppColors.error,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
+      errorMaxLines: 3,
+      floatingLabelBehavior: FloatingLabelBehavior.auto,
+      isDense: true,
+    );
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -90,30 +161,38 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           backgroundColor: Colors.white,
           body: Stack(
             children: [
-              // Background layer - just a plain white screen
+              // Background layer with gradient
               Positioned.fill(
                 child: Container(
-                  color: Colors.white,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white,
+                        AppColors.background.withOpacity(0.3),
+                      ],
+                    ),
+                  ),
                 ),
               ),
 
-              // Main screen with gesture detector - using Transform instead of Positioned
+              // Main screen with gesture detector
               Transform.translate(
                 offset: Offset(_dragDistance, 0),
                 child: SizedBox(
-                  width: screenWidth, // Ensure full width
-                  height: screenHeight, // Ensure full height
+                  width: screenWidth,
+                  height: screenHeight,
                   child: GestureDetector(
                     onHorizontalDragStart: _handleHorizontalDragStart,
                     onHorizontalDragUpdate: _handleHorizontalDragUpdate,
                     onHorizontalDragEnd: _handleHorizontalDragEnd,
                     onTap: _unfocusKeyboard,
                     child: Material(
-                      elevation: 8,
-                      color: Colors.white,
-                      shadowColor: Colors.black.withOpacity(0.2),
+                      elevation: 0,
+                      color: Colors.transparent,
                       child: Scaffold(
-                        backgroundColor: AppColors.white,
+                        backgroundColor: Colors.transparent,
                         appBar: AppBar(
                           elevation: 0,
                           backgroundColor: Colors.transparent,
@@ -126,6 +205,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 color: Colors.black),
                             onPressed: () => Navigator.pop(context),
                           ),
+                          title: Text(
+                            "Lupa Password",
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.black,
+                                ),
+                          ),
+                          centerTitle: true,
                         ),
                         body: SafeArea(
                           child: SingleChildScrollView(
@@ -134,22 +224,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               padding:
                                   const EdgeInsets.all(AppSizes.defaultSpace),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  // SVG Illustration centered - positioned above the title
-                                  Center(
-                                    child: SvgPicture.asset(
-                                      'assets/images/background/forgot-password.svg',
-                                      height: screenHeight * 0.35,
-                                      width: screenWidth * 0.9,
-                                      fit: BoxFit.contain,
-                                    ),
+                                  // SVG Illustration centered
+                                  SvgPicture.asset(
+                                    'assets/images/background/forgot-password.svg',
+                                    height: screenHeight * 0.3,
+                                    width: screenWidth * 0.9,
+                                    fit: BoxFit.contain,
                                   ),
-                                  const SizedBox(height: AppSizes.md),
+                                  const SizedBox(
+                                      height: AppSizes.spaceBtwSections),
 
                                   // Title
                                   Text(
-                                    AppTexts.forgotPasswordTitle,
+                                    "Atur Ulang Password",
                                     style: Theme.of(context)
                                         .textTheme
                                         .headlineMedium
@@ -157,104 +246,142 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.black,
                                         ),
+                                    textAlign: TextAlign.center,
                                   ),
                                   const SizedBox(height: AppSizes.sm),
 
                                   // Subtitle
                                   Text(
-                                    AppTexts.forgotPasswordSubtitle,
+                                    "Masukkan email Anda untuk menerima tautan reset password",
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium
                                         ?.copyWith(
                                           color: AppColors.darkGrey,
                                         ),
+                                    textAlign: TextAlign.center,
                                   ),
                                   const SizedBox(
                                       height: AppSizes.spaceBtwSections),
 
                                   // Form
                                   Form(
+                                    key: _formKey,
                                     child: Column(
                                       children: [
-                                        // Email Field
-                                        TextFormField(
-                                          keyboardType:
-                                              TextInputType.emailAddress,
-                                          decoration: InputDecoration(
-                                            labelText: AppTexts.email,
-                                            labelStyle: TextStyle(
-                                                color: AppColors.darkGrey),
-                                            prefixIcon: Icon(Iconsax.message,
-                                                color: AppColors.darkGrey),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(AppSizes
-                                                      .inputFieldRadius),
-                                            ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(AppSizes
-                                                      .inputFieldRadius),
-                                              borderSide: BorderSide(
-                                                  color: AppColors.grey),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(AppSizes
-                                                      .inputFieldRadius),
-                                              borderSide: BorderSide(
-                                                  color: AppColors.primary),
-                                            ),
-                                            filled: true,
-                                            fillColor: AppColors.lightGrey
-                                                .withOpacity(0.1),
-                                            hintText:
-                                                "Enter your institutional email (@students.del.ac.id or @del.ac.id)",
+                                        // Email Field with custom error container
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                                AppSizes.inputFieldRadius),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: AppColors.primary
+                                                    .withOpacity(0.08),
+                                                blurRadius: 12,
+                                                offset: const Offset(0, 3),
+                                                spreadRadius: 0,
+                                              ),
+                                            ],
                                           ),
-                                          validator: (value) {
-                                            if (value == null ||
-                                                value.isEmpty) {
-                                              return AppTexts.requiredField;
-                                            }
+                                          child: TextFormField(
+                                            controller: _emailController,
+                                            keyboardType:
+                                                TextInputType.emailAddress,
+                                            textInputAction:
+                                                TextInputAction.done,
+                                            cursorColor: AppColors.primary,
+                                            cursorWidth: 1.5,
+                                            cursorRadius:
+                                                const Radius.circular(2),
+                                            decoration:
+                                                inputDecoration.copyWith(
+                                              labelText: "Email",
+                                              hintText:
+                                                  "Masukkan email institusi Anda",
+                                              prefixIcon: Container(
+                                                margin: const EdgeInsets.only(
+                                                    left: 12, right: 8),
+                                                child: Icon(
+                                                  Iconsax.message,
+                                                  color: AppColors.primary,
+                                                  size: AppSizes.iconMd,
+                                                ),
+                                              ),
+                                              prefixIconConstraints:
+                                                  const BoxConstraints(
+                                                minWidth: 50,
+                                                minHeight: 50,
+                                              ),
+                                              labelStyle: TextStyle(
+                                                color: AppColors.darkGrey,
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 14,
+                                              ),
+                                              hintStyle: TextStyle(
+                                                color: AppColors.darkGrey
+                                                    .withOpacity(0.5),
+                                                fontSize: 13,
+                                              ),
+                                              floatingLabelStyle: TextStyle(
+                                                color: AppColors.primary,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                              // Now using regular error style that displays below the field
+                                              errorStyle: TextStyle(
+                                                color: AppColors.error,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                height: 1.2,
+                                              ),
+                                              errorMaxLines: 3,
+                                            ),
+                                            style: TextStyle(
+                                              color: AppColors.black,
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 15,
+                                            ),
+                                            validator: (value) {
+                                              if (value == null ||
+                                                  value.isEmpty) {
+                                                return "Email tidak boleh kosong";
+                                              }
 
-                                            // Check for valid DEL institutional email format
-                                            bool isValidInstitutionalEmail =
-                                                value.endsWith(
-                                                        '@students.del.ac.id') ||
-                                                    value
-                                                        .endsWith('@del.ac.id');
+                                              // Check for valid DEL institutional email format
+                                              bool isValidInstitutionalEmail =
+                                                  value.endsWith(
+                                                          '@students.del.ac.id') ||
+                                                      value.endsWith(
+                                                          '@del.ac.id');
 
-                                            if (!isValidInstitutionalEmail) {
-                                              return "Please enter a valid institutional email address (@students.del.ac.id or @del.ac.id)";
-                                            }
+                                              if (!isValidInstitutionalEmail) {
+                                                return "Masukkan email institusi yang valid\n(@students.del.ac.id atau @del.ac.id)";
+                                              }
 
-                                            return null;
-                                          },
+                                              return null;
+                                            },
+                                            onFieldSubmitted: (_) =>
+                                                _handleSubmit(),
+                                            autovalidateMode: AutovalidateMode
+                                                .onUserInteraction,
+                                          ),
                                         ),
                                         const SizedBox(
-                                            height:
-                                                AppSizes.spaceBtwInputFields),
+                                            height: AppSizes.spaceBtwSections),
 
                                         // Submit Button
                                         SizedBox(
                                           width: double.infinity,
                                           child: ElevatedButton(
-                                            onPressed: () {
-                                              // Navigate to verification code screen
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const VerificationCodeScreen(),
-                                                ),
-                                              );
-                                            },
+                                            onPressed: _isLoading
+                                                ? null
+                                                : _handleSubmit,
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
                                                   AppColors.primary,
                                               foregroundColor: AppColors.white,
-                                              elevation: 4,
+                                              elevation: 0,
                                               shape: RoundedRectangleBorder(
                                                 borderRadius:
                                                     BorderRadius.circular(
@@ -264,14 +391,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                                   const EdgeInsets.symmetric(
                                                       vertical: AppSizes
                                                           .buttonHeight),
+                                              disabledBackgroundColor: AppColors
+                                                  .primary
+                                                  .withOpacity(0.6),
+                                              disabledForegroundColor:
+                                                  Colors.white,
                                             ),
-                                            child: Text(
-                                              AppTexts.submit.toUpperCase(),
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: 1.5,
-                                              ),
-                                            ),
+                                            child: _isLoading
+                                                ? const SizedBox(
+                                                    height: 20,
+                                                    width: 20,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      color: Colors.white,
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  )
+                                                : const Text(
+                                                    "KIRIM EMAIL RESET",
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      letterSpacing: 1.2,
+                                                    ),
+                                                  ),
                                           ),
                                         ),
                                         const SizedBox(
@@ -282,14 +425,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                           onPressed: () =>
                                               Navigator.pop(context),
                                           child: Text(
-                                            AppTexts.backToLogin,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.copyWith(
-                                                  color: AppColors.primary,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                                            "Kembali ke halaman login",
+                                            style: TextStyle(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                            ),
                                           ),
                                         ),
                                       ],

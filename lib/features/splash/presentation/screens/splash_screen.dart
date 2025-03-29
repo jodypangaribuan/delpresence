@@ -64,41 +64,8 @@ class _SplashScreenState extends State<SplashScreen>
             children: [
               Image.asset(
                 'assets/images/logo.png',
-                width: 100,
-                height: 100,
-              ),
-              const SizedBox(height: 8),
-              RichText(
-                text: TextSpan(
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.0,
-                  ),
-                  children: [
-                    const TextSpan(
-                      text: 'Del',
-                      style: TextStyle(
-                        color: Color(0xFF051349),
-                      ),
-                    ),
-                    TextSpan(
-                      text: 'Presence',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Mobile Attendance Application',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color.fromARGB(255, 0, 0, 0),
-                  letterSpacing: 0.5,
-                ),
+                width: 200,
+                height: 200,
               ),
             ],
           ),

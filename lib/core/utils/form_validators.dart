@@ -23,14 +23,14 @@ class FormValidators {
     return null;
   }
 
-  // Validasi NIM/NIP
-  static String? validateNimNip(String? value) {
+  // Validasi username
+  static String? validateUsername(String? value) {
     if (value == null || value.isEmpty) {
-      return 'NIM/NIP tidak boleh kosong';
+      return 'Nama pengguna tidak boleh kosong';
     }
 
-    if (value.length < 5) {
-      return 'NIM/NIP terlalu pendek';
+    if (value.length < 3) {
+      return 'Nama pengguna terlalu pendek';
     }
     return null;
   }

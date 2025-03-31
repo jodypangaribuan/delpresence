@@ -15,49 +15,53 @@ class AuthResponseModel {
 
   factory AuthResponseModel.fromJson(Map<String, dynamic> json) {
     return AuthResponseModel(
-      success: json['success'] as bool,
-      message: json['message'] as String,
+      success: json['success'] ?? false,
+      message: json['message'] ?? 'Unknown response',
       data: json['data'] != null ? AuthDataModel.fromJson(json['data']) : null,
+    );
+  }
+
+  factory AuthResponseModel.error(String message) {
+    return AuthResponseModel(
+      success: false,
+      message: message,
     );
   }
 }
 
 class AuthDataModel {
-  final dynamic user;
-  final String userType;
-  final TokensModel? tokens;
+  final String token;
+  final UserModel user;
 
   AuthDataModel({
+    required this.token,
     required this.user,
-    required this.userType,
-    this.tokens,
   });
 
   factory AuthDataModel.fromJson(Map<String, dynamic> json) {
-    // Extract user data based on user_type
-    final userType = json['user_type'] as String? ?? '';
-    dynamic user;
-
-    if (json.containsKey('user') && json['user'] != null) {
-      if (userType == 'student') {
-        user = StudentModel.fromJson(json['user'] as Map<String, dynamic>);
-      } else if (userType == 'lecture') {
-        user = LectureModel.fromJson(json['user'] as Map<String, dynamic>);
-      } else {
-        user = UserModel.fromJson(json['user'] as Map<String, dynamic>);
-      }
-    }
-
-    // Extract tokens if available
-    TokensModel? tokens;
-    if (json.containsKey('tokens') && json['tokens'] != null) {
-      tokens = TokensModel.fromJson(json['tokens'] as Map<String, dynamic>);
-    }
-
     return AuthDataModel(
-      user: user,
-      userType: userType,
-      tokens: tokens,
+      token: json['token'] ?? '',
+      user: UserModel.fromJson(json['user'] ?? {}),
+    );
+  }
+}
+
+class UserModel {
+  final String id;
+  final String username;
+  final String name;
+
+  UserModel({
+    required this.id,
+    required this.username,
+    required this.name,
+  });
+
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      id: json['id']?.toString() ?? '',
+      username: json['username'] ?? '',
+      name: json['name'] ?? '',
     );
   }
 }

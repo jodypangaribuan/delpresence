@@ -2,12 +2,12 @@ import 'package:delpresence/features/home/presentation/screens/home_screen.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax/iconsax.dart';
+import 'dart:ui' as ui;
 import '../../../../core/constants/colors.dart';
 import '../../../../core/constants/sizes.dart';
 import '../../../../core/constants/text_strings.dart';
 import '../bloc/auth_bloc.dart';
-import '../screens/register_screen.dart';
-import '../screens/forgot_password_screen.dart';
+import '../../domain/repositories/auth_repository.dart';
 
 class LoginFormSection extends StatefulWidget {
   const LoginFormSection({Key? key}) : super(key: key);
@@ -18,32 +18,118 @@ class LoginFormSection extends StatefulWidget {
 
 class _LoginFormSectionState extends State<LoginFormSection> {
   final _formKey = GlobalKey<FormState>();
-  final _loginIdController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _rememberMe = true;
+  bool _rememberMe = false; // Default to false for security
   bool _isLoading = false;
+  bool _showStudentOnlyWarning = false;
+  bool _showCredentialsWarning = false;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // We need to delay this call to get the context in initState
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSavedCredentials();
+    });
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    // Check if the context is still valid (widget is still mounted)
+    if (!mounted) return;
+
+    final authRepository = context.read<AuthBloc>().repository;
+
+    try {
+      // Load remember me setting
+      final rememberMe = await authRepository.getRememberMe();
+
+      // If remember me is enabled, try to load saved credentials
+      if (rememberMe) {
+        final savedCredentials = await authRepository.getSavedCredentials();
+
+        if (savedCredentials != null && mounted) {
+          setState(() {
+            _usernameController.text = savedCredentials['username'] ?? '';
+            _passwordController.text = savedCredentials['password'] ?? '';
+            _rememberMe = true;
+          });
+
+          print('Loaded saved credentials for: ${_usernameController.text}');
+        }
+      }
+
+      // Mark as initialized after loading
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      print('Error loading saved credentials: $e');
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
-    _loginIdController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   void _handleLogin() {
     if (_formKey.currentState!.validate()) {
+      final username = _usernameController.text;
+      final password = _passwordController.text;
+
+      // Reset warnings when attempting new login
+      setState(() {
+        _showStudentOnlyWarning = false;
+        _showCredentialsWarning = false;
+      });
+
+      // Save credentials if remember me is checked
+      context.read<AuthBloc>().repository.saveCredentials(
+            username,
+            password,
+            _rememberMe,
+          );
+
       context.read<AuthBloc>().add(
             LoginEvent(
-              loginId: _loginIdController.text,
-              password: _passwordController.text,
+              username: username,
+              password: password,
             ),
           );
     }
   }
 
+  void _showForgotPasswordMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Fitur lupa kata sandi tidak tersedia saat ini.'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Don't render until initialization is complete
+    if (!_isInitialized) {
+      return Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    // Define common input decoration to maintain consistency
     final inputDecoration = InputDecoration(
       filled: true,
       fillColor: Colors.white,
@@ -76,40 +162,60 @@ class _LoginFormSectionState extends State<LoginFormSection> {
         fontSize: 12,
         fontWeight: FontWeight.w500,
       ),
+      errorMaxLines: 3,
       floatingLabelBehavior: FloatingLabelBehavior.auto,
       isDense: true,
     );
 
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthLoading) {
-          setState(() => _isLoading = true);
-        } else {
-          setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = state is AuthLoading;
+        });
 
-          if (state is AuthSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message ?? 'Login successful'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            // Navigate to home screen
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const HomeScreen(),
-              ),
-              (route) => false,
-            );
-          } else if (state is AuthError) {
+        if (state is AuthError) {
+          // Add diagnostic logging
+          print('Auth Error: ${state.message}');
+
+          // Check if this is an access denied error
+          if (state.message.startsWith('ACCESS_DENIED:')) {
+            print('Showing student-only warning');
+            setState(() {
+              _showStudentOnlyWarning = true;
+              _showCredentialsWarning = false;
+            });
+            // Do not show snackbar for access denied and don't navigate to home screen
+          } else if (state.message == 'Username atau password salah' ||
+              state.message.toLowerCase().contains('invalid credentials') ||
+              state.message.toLowerCase().contains('authentication failed')) {
+            // Handle all variations of credential errors
+            print('Showing credentials warning for: ${state.message}');
+            // Show credentials warning banner
+            setState(() {
+              _showCredentialsWarning = true;
+              _showStudentOnlyWarning = false;
+            });
+          } else {
+            print('Showing general error snackbar: ${state.message}');
+            setState(() {
+              _showCredentialsWarning = false;
+              _showStudentOnlyWarning = false;
+            });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.error,
               ),
             );
           }
+        }
+
+        if (state is AuthSuccess) {
+          print('Authentication successful, navigating to home');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
         }
       },
       child: Form(
@@ -117,7 +223,81 @@ class _LoginFormSectionState extends State<LoginFormSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // NIM/NIP Field with animation
+            // Student-only warning banner - only shown when non-student tries to login
+            if (_showStudentOnlyWarning)
+              Container(
+                margin: const EdgeInsets.only(
+                    bottom: AppSizes.spaceBtwSections * 0.8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.warning,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Iconsax.info_circle,
+                      color: AppColors.warning,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Aplikasi ini hanya dapat digunakan oleh mahasiswa aktif Institut Teknologi Del.',
+                        style: TextStyle(
+                          color: AppColors.black.withOpacity(0.8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Invalid credentials warning banner - shown when username or password is incorrect
+            if (_showCredentialsWarning)
+              Container(
+                margin: const EdgeInsets.only(
+                    bottom: AppSizes.spaceBtwSections * 0.8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.error,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Iconsax.info_circle,
+                      color: AppColors.error,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Username atau password yang Anda masukkan salah. Silakan coba lagi.',
+                        style: TextStyle(
+                          color: AppColors.black.withOpacity(0.8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Username Field with animation
             TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: 0.0, end: 1.0),
               duration: const Duration(milliseconds: 500),
@@ -144,19 +324,19 @@ class _LoginFormSectionState extends State<LoginFormSection> {
                   ],
                 ),
                 child: TextFormField(
-                  controller: _loginIdController,
+                  controller: _usernameController,
                   keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.next,
                   cursorColor: AppColors.primary,
                   cursorWidth: 1.5,
                   cursorRadius: const Radius.circular(2),
                   decoration: inputDecoration.copyWith(
-                    labelText: AppTexts.email,
-                    hintText: AppTexts.nimNipHint,
+                    labelText: "Username",
+                    hintText: "Masukkan username Anda",
                     prefixIcon: Container(
                       margin: const EdgeInsets.only(left: 12, right: 8),
                       child: Icon(
-                        Iconsax.card,
+                        Iconsax.user,
                         color: AppColors.primary,
                         size: AppSizes.iconMd,
                       ),
@@ -189,11 +369,6 @@ class _LoginFormSectionState extends State<LoginFormSection> {
                     if (value == null || value.isEmpty) {
                       return AppTexts.requiredField;
                     }
-
-                    if (value.length < 5) {
-                      return 'NIM/NIP terlalu pendek';
-                    }
-
                     return null;
                   },
                   onChanged: (value) {
@@ -245,7 +420,7 @@ class _LoginFormSectionState extends State<LoginFormSection> {
                     prefixIcon: Container(
                       margin: const EdgeInsets.only(left: 12, right: 8),
                       child: Icon(
-                        Iconsax.password_check,
+                        Iconsax.lock,
                         color: AppColors.primary,
                         size: AppSizes.iconMd,
                       ),
@@ -253,6 +428,18 @@ class _LoginFormSectionState extends State<LoginFormSection> {
                     prefixIconConstraints: const BoxConstraints(
                       minWidth: 50,
                       minHeight: 50,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
+                        color: AppColors.darkGrey,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
                     ),
                     labelStyle: TextStyle(
                       color: AppColors.darkGrey,
@@ -268,35 +455,6 @@ class _LoginFormSectionState extends State<LoginFormSection> {
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
-                    suffixIcon: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.only(right: 8),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(50),
-                          onTap: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            child: Icon(
-                              _obscurePassword
-                                  ? Iconsax.eye_slash
-                                  : Iconsax.eye,
-                              color: AppColors.primary,
-                              size: AppSizes.iconMd - 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    suffixIconConstraints: const BoxConstraints(
-                      minWidth: 40,
-                      minHeight: 40,
-                    ),
                   ),
                   style: TextStyle(
                     color: AppColors.black,
@@ -306,9 +464,6 @@ class _LoginFormSectionState extends State<LoginFormSection> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return AppTexts.requiredField;
-                    }
-                    if (value.length < 6) {
-                      return AppTexts.invalidPassword;
                     }
                     return null;
                   },
@@ -337,67 +492,55 @@ class _LoginFormSectionState extends State<LoginFormSection> {
                   // Remember Me
                   Row(
                     children: [
-                      Theme(
-                        data: ThemeData(
-                          checkboxTheme: CheckboxThemeData(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                        child: Transform.scale(
-                          scale: 0.9,
-                          child: Checkbox(
-                            value: _rememberMe,
-                            onChanged: (value) {
-                              setState(() {
-                                _rememberMe = value ?? true;
-                              });
-                            },
-                            activeColor: AppColors.primary,
-                            side: BorderSide(
-                              color: AppColors.darkGrey.withOpacity(0.6),
-                              width: 1.5,
-                            ),
+                      Transform.scale(
+                        scale: 0.9,
+                        child: Checkbox(
+                          value: _rememberMe,
+                          onChanged: (value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+
+                            // If unchecked, clear saved credentials
+                            if (value == false) {
+                              context
+                                  .read<AuthBloc>()
+                                  .repository
+                                  .clearCredentials();
+                            }
+                          },
+                          activeColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
                           ),
                         ),
                       ),
                       Text(
                         AppTexts.rememberMe,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.darkGrey,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 13,
-                            ),
+                        style: TextStyle(
+                          color: AppColors.darkGrey,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
 
                   // Forgot Password
                   TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ForgotPasswordScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: _showForgotPasswordMessage,
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      minimumSize: const Size(0, 36),
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size(0, 30),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: Text(
                       AppTexts.forgotPassword,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                            decorationColor: AppColors.primary.withOpacity(0.5),
-                            fontSize: 13,
-                          ),
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -405,10 +548,10 @@ class _LoginFormSectionState extends State<LoginFormSection> {
             ),
             const SizedBox(height: AppSizes.spaceBtwSections),
 
-            // Sign In Button with animation
+            // Login Button with animation
             TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: 0.0, end: 1.0),
-              duration: const Duration(milliseconds: 800),
+              duration: const Duration(milliseconds: 800), // most delayed
               builder: (context, value, child) {
                 return Transform.translate(
                   offset: Offset(0, 20 * (1 - value)),
@@ -418,111 +561,42 @@ class _LoginFormSectionState extends State<LoginFormSection> {
                   ),
                 );
               },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+              child: SizedBox(
                 width: double.infinity,
-                height: 56,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppSizes.buttonRadius),
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary.withOpacity(0.9),
-                      AppColors.primary,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          AppColors.primary.withOpacity(_isLoading ? 0.3 : 0.4),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                      spreadRadius: -2,
-                    ),
-                  ],
-                ),
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: EdgeInsets.zero,
-                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSizes.buttonHeight,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius:
                           BorderRadius.circular(AppSizes.buttonRadius),
                     ),
-                    disabledBackgroundColor: Colors.transparent,
-                    disabledForegroundColor: Colors.white.withOpacity(0.8),
-                    shadowColor: Colors.transparent,
+                    elevation: 3,
+                    shadowColor: AppColors.primary.withOpacity(0.3),
                   ),
                   child: _isLoading
                       ? SizedBox(
-                          height: 24,
-                          width: 24,
+                          height: 20,
+                          width: 20,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white.withOpacity(0.9),
-                            ),
+                            color: Colors.white,
+                            strokeWidth: 2,
                           ),
                         )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              AppTexts.loginButton,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.2,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Iconsax.login,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                          ],
+                      : Text(
+                          AppTexts.loginButton,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
                         ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSizes.spaceBtwItems),
-
-            // Create Account
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  AppTexts.dontHaveAccount,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkGrey,
-                      ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const RegisterScreen(),
-                      ),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                  ),
-                  child: Text(
-                    AppTexts.createAccount,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-              ],
             ),
           ],
         ),

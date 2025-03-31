@@ -1,36 +1,25 @@
 import '../../data/models/auth_response_model.dart';
 
 abstract class AuthRepository {
-  Future<AuthResponseModel> registerStudent({
-    required String nim,
-    required String firstName,
-    String? middleName,
-    String? lastName,
-    required String email,
-    required String password,
-    required String major,
-    required String faculty,
-    required String batch,
-  });
-
-  Future<AuthResponseModel> registerLecture({
-    required String nip,
-    required String firstName,
-    String? middleName,
-    String? lastName,
-    required String email,
-    required String password,
-    required String position,
-  });
-
   Future<AuthResponseModel> login({
-    required String loginId,
+    required String username,
     required String password,
   });
 
-  Future<AuthResponseModel> refreshToken(String refreshToken);
+  Future<void> saveToken(String token);
 
-  Future<AuthResponseModel> logout();
+  Future<String?> getToken();
 
-  Future<AuthResponseModel> getCurrentUser();
+  Future<void> clearToken();
+
+  Future<bool> isLoggedIn();
+
+  // Remember me functionality
+  Future<void> saveCredentials(String username, String password, bool remember);
+
+  Future<Map<String, String>?> getSavedCredentials();
+
+  Future<bool> getRememberMe();
+
+  Future<void> clearCredentials();
 }

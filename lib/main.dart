@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'dart:io';
 
 import 'core/theme/theme.dart';
-import 'core/config/api_config.dart';
-import 'core/utils/api_logger.dart';
 import 'core/utils/http_override.dart';
-import 'core/utils/api_connection_monitor.dart';
+import 'core/utils/api_logger.dart';
 import 'features/splash/presentation/screens/splash_screen.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
+import 'features/auth/data/datasources/auth_remote_datasource.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 
 void main() async {
@@ -18,6 +18,11 @@ void main() async {
 
   // Set HTTP overrides untuk menerima sertifikat self-signed
   HttpOverrides.global = DevHttpOverrides();
+
+  // Configure API Logger
+  ApiLogger.setEnabled(true);
+  ApiLogger.setDetailedMode(true);
+  ApiLogger.setColorfulLogs(true);
 
   // Set system UI properties immediately on app startup
   SystemChrome.setSystemUIOverlayStyle(
@@ -31,67 +36,39 @@ void main() async {
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
 
-  // Initialize API configuration dengan nilai default
-  ApiConfig.instance.initialize(
-    timeout: 60, // Memperpanjang timeout menjadi 60 detik
-  );
+  // Create http client
+  final httpClient = http.Client();
 
-  // Configure API logger
-  ApiLogger.setEnabled(ApiConfig.instance.isLoggingEnabled);
-  ApiLogger.setDetailedMode(true);
-
-  // Check API connection
-  await _checkApiConnection();
-
-  runApp(MyApp(prefs: prefs));
-}
-
-/// Periksa koneksi API dan cetak hasilnya
-Future<void> _checkApiConnection() async {
-  debugPrint('');
-  debugPrint('┌─────────────── DELPRESENCE APP ─────────────────');
-  debugPrint('│ 🚀 Aplikasi dimulai pada ${DateTime.now()}');
-  debugPrint('│ 🔄 Memeriksa koneksi ke API...');
-  debugPrint('└───────────────────────────────────────────────');
-
-  // Coba periksa koneksi ke API
-  try {
-    final isConnected = await ApiConnectionMonitor.instance.checkConnection();
-
-    debugPrint('');
-    debugPrint('┌─────────────── API CONNECTION ─────────────────');
-    if (isConnected) {
-      debugPrint('│ ✅ API terhubung dan siap digunakan');
-    } else {
-      debugPrint('│ ❌ API tidak dapat diakses!');
-      debugPrint('│ 📝 Pesan: ${ApiConnectionMonitor.instance.statusMessage}');
-      debugPrint('│ ⚠️  Aplikasi mungkin tidak berfungsi dengan baik');
-    }
-    debugPrint('└───────────────────────────────────────────────');
-    debugPrint('');
-  } catch (e) {
-    debugPrint('');
-    debugPrint('┌─────────────── API CONNECTION ERROR ──────────');
-    debugPrint('│ ❌ Terjadi kesalahan saat memeriksa koneksi API');
-    debugPrint('│ 📝 Error: ${e.toString()}');
-    debugPrint('└───────────────────────────────────────────────');
-    debugPrint('');
-  }
+  runApp(MyApp(
+    prefs: prefs,
+    httpClient: httpClient,
+  ));
 }
 
 class MyApp extends StatelessWidget {
   final SharedPreferences prefs;
+  final http.Client httpClient;
 
-  const MyApp({Key? key, required this.prefs}) : super(key: key);
+  const MyApp({
+    Key? key,
+    required this.prefs,
+    required this.httpClient,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Set up dependencies
+    final authRemoteDataSource = AuthRemoteDataSourceImpl(client: httpClient);
+    final authRepository = AuthRepositoryImpl(
+      remoteDataSource: authRemoteDataSource,
+      prefs: prefs,
+    );
+
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (context) => AuthBloc(
-            AuthRepositoryImpl(prefs),
-          ),
+          create: (context) =>
+              AuthBloc(authRepository)..add(CheckAuthStatusEvent()),
         ),
       ],
       child: MaterialApp(

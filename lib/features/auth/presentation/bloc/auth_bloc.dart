@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import '../../domain/repositories/auth_repository.dart';
-import '../../data/models/auth_response_model.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -80,7 +80,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       emit(AuthInitial());
     } catch (e) {
-      emit(AuthError(e.toString()));
+      debugPrint('Error during logout: $e');
+      // Even if there's an error, we want to log the user out
+      emit(AuthInitial());
     }
   }
 
@@ -90,17 +92,32 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     try {
       emit(AuthLoading());
+
+      // Check if user is logged in (has valid token)
       final isLoggedIn = await _authRepository.isLoggedIn();
 
       if (isLoggedIn) {
-        // For simplicity, we're not fetching the user profile
-        // In a full implementation, you'd fetch the user profile from API
-        emit(const AuthAuthenticated());
+        // Get token to verify it's actually there
+        final token = await _authRepository.getToken();
+
+        if (token != null && token.isNotEmpty) {
+          // User has a valid token in storage
+          debugPrint('User is already logged in with valid token');
+          emit(const AuthAuthenticated());
+        } else {
+          // Token is missing or empty
+          debugPrint('Token missing, user is not authenticated');
+          emit(AuthInitial());
+        }
       } else {
+        // No token or expired
+        debugPrint('User is not logged in');
         emit(AuthInitial());
       }
     } catch (e) {
-      emit(AuthError(e.toString()));
+      debugPrint('Error checking auth status: $e');
+      // If there's an error, we assume user is not authenticated
+      emit(AuthInitial());
     }
   }
 }

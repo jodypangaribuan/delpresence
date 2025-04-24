@@ -41,6 +41,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/background/
+    - assets/images/background/background-header.png
     - assets/icons/
 
   fonts:

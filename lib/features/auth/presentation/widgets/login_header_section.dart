@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/colors.dart';
 import '../../../../core/constants/sizes.dart';
-import '../../../../core/constants/text_strings.dart';
 
 class LoginHeaderSection extends StatelessWidget {
-  const LoginHeaderSection({Key? key}) : super(key: key);
+  const LoginHeaderSection({super.key});
 
   @override
   Widget build(BuildContext context) {

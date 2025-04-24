@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import '../models/mahasiswa_model.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/error/exceptions.dart';
-import '../../../../core/utils/http_override.dart';
 import '../../../../core/utils/api_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,8 +31,8 @@ class MahasiswaRemoteDataSourceImpl implements MahasiswaRemoteDataSource {
       throw ServerException('Token not found');
     }
 
-    final url =
-        Uri.parse('${ApiConstants.mahasiswaCompleteEndpoint}?user_id=$userId');
+    final url = Uri.parse(
+        '${ApiConstants.baseUrl}/api/v1/mahasiswa/complete?user_id=$userId');
 
     try {
       // Log the request

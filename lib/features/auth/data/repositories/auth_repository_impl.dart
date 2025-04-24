@@ -67,8 +67,31 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<bool> isLoggedIn() async {
-    final token = await getToken();
-    return token != null && token.isNotEmpty;
+    try {
+      // Check if auth token exists
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        debugPrint('No auth token found');
+        return false;
+      }
+
+      // Also check if user info is saved
+      final username = prefs.getString('username');
+      final userRole = prefs.getString('user_role');
+
+      if (username == null || userRole == null) {
+        debugPrint('User info missing, clearing token');
+        await clearToken();
+        return false;
+      }
+
+      // For a complete solution, we would validate token with backend
+      // But for now, we'll just check if it exists and user info is available
+      return true;
+    } catch (e) {
+      debugPrint('Error checking login status: $e');
+      return false;
+    }
   }
 
   // Remember me implementation

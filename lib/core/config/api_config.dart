@@ -11,7 +11,7 @@ class ApiConfig {
 
   // API configuration constants
   static const String DEFAULT_BASE_URL =
-      'https://e856-103-167-217-200.ngrok-free.app/api/v1';
+      'https://0fad-2404-c0-5610-00-722-df8a.ngrok-free.app/api/v1';
   static const int DEFAULT_TIMEOUT = 30;
   static const String API_VERSION = 'v1';
   static const bool DEFAULT_ENABLE_LOGGING = true;

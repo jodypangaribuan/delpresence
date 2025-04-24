@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
 import '../../constants/colors.dart';
 
 class CustomTextField extends StatelessWidget {
@@ -21,7 +20,7 @@ class CustomTextField extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
 
   const CustomTextField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.labelText,
     this.hintText,
@@ -38,7 +37,7 @@ class CustomTextField extends StatelessWidget {
     this.enabled = true,
     this.focusNode,
     this.padding,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

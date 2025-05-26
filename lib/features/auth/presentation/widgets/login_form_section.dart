@@ -1,7 +1,6 @@
 import 'package:delpresence/features/home/presentation/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:iconsax/iconsax.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/constants/sizes.dart';
 import '../../../../core/constants/text_strings.dart';
@@ -9,6 +8,7 @@ import '../../../../core/widgets/form/custom_text_field.dart';
 import '../../../../core/widgets/form/custom_password_field.dart';
 import '../bloc/auth_bloc.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class LoginFormSection extends StatefulWidget {
   const LoginFormSection({super.key});
@@ -71,12 +71,8 @@ class _LoginFormSectionState extends State<LoginFormSection> {
   }
 
   void _showForgotPasswordMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Fitur lupa kata sandi tidak tersedia saat ini.'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    ToastUtils.showWarningToast(
+        context, 'Fitur lupa kata sandi tidak tersedia saat ini.');
   }
 
   @override
@@ -99,12 +95,7 @@ class _LoginFormSectionState extends State<LoginFormSection> {
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         } else if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ToastUtils.showErrorToast(context, state.message);
         }
       },
       builder: (context, state) {
@@ -116,8 +107,8 @@ class _LoginFormSectionState extends State<LoginFormSection> {
               // Username Field
               CustomTextField(
                 controller: _usernameController,
-                labelText: "NIM",
-                hintText: "Masukkan NIM Anda",
+                labelText: "Username",
+                hintText: "Masukkan Username Anda",
                 prefixIcon: Icons.person_outline,
                 validator: (value) {
                   if (value == null || value.isEmpty) {

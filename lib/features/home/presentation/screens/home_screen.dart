@@ -4,9 +4,20 @@ import 'package:flutter/services.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/widgets/global_bottom_nav.dart';
+import '../../../../core/utils/toast_utils.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
+import '../../../schedule/presentation/screens/today_schedule_page.dart';
+import '../../../schedule/presentation/screens/schedule_screen.dart';
+import '../../../attendance/presentation/screens/attendance_history_screen.dart';
+import '../../../attendance/presentation/screens/today_attendance_history_page.dart';
+import '../../../attendance/presentation/screens/course_selection_screen.dart';
 import '../widgets/home_header.dart';
+import '../bloc/student_bloc.dart';
+import '../../domain/repositories/student_repository.dart';
+import 'course_list_screen.dart';
+import 'profile_screen.dart';
+import '../../../../features/settings/presentation/screens/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,37 +30,110 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   // Halaman yang akan ditampilkan berdasarkan index bottom navbar
-  final List<Widget> _pages = [
-    const _HomePage(),
-    const _DummyPage(title: 'Jadwal', color: Colors.green),
-    const _DummyPage(title: 'Scan Absensi', color: Colors.purple),
-    const _DummyPage(title: 'Riwayat', color: Colors.orange),
-    const _DummyPage(title: 'Profil', color: Colors.teal),
-  ];
+  late final List<Widget> _pages;
 
   void _onNavTap(int index) {
+    print('Bottom navbar tapped with index: $index');
     setState(() {
       _currentIndex = index;
     });
   }
 
   @override
+  void initState() {
+    super.initState();
+
+    // Initialize pages list
+    _pages = [
+      const _HomePage(),
+      const TodaySchedulePage(),
+      const CourseSelectionScreen(),
+      const TodayAttendanceHistoryPage(),
+      const ProfileScreen(),
+    ];
+
+    // Ensure UI overlay style is set consistently
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
+    );
+  }
+
+  // Handle navigation to different pages based on bottom navbar index
+  Widget _getPageForIndex(int index) {
+    switch (index) {
+      case 0:
+        return const _HomePage();
+      case 1:
+        return const TodaySchedulePage();
+      case 2:
+        return const CourseSelectionScreen();
+      case 3:
+        return const TodayAttendanceHistoryPage();
+      case 4:
+        return const ProfileScreen();
+      default:
+        return const _HomePage();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthInitial) {
-          // Navigate to login screen when logout is successful
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-          );
-        }
-      },
-      child: Scaffold(
-        // Hapus AppBar untuk menggunakan HomeHeader sepenuhnya
-        body: _pages[_currentIndex],
-        bottomNavigationBar: GlobalBottomNav(
-          currentIndex: _currentIndex,
-          onTap: _onNavTap,
+    return BlocProvider(
+      create: (context) => StudentBloc(
+        context.read<StudentRepository>(),
+      )..add(const LoadStudentDataEvent()),
+      child: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthInitial) {
+            // Navigate to login screen when logout is successful
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            );
+          }
+        },
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            systemNavigationBarColor: Colors.transparent,
+          ),
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            extendBodyBehindAppBar: true,
+            extendBody: true,
+            body: _getPageForIndex(_currentIndex),
+            // Center floating action button for QR scan (index 2)
+            floatingActionButton: FloatingActionButton(
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                // Navigate directly to the CourseSelectionScreen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CourseSelectionScreen(),
+                  ),
+                );
+              },
+              backgroundColor: AppColors.primary,
+              elevation: 4,
+              child: const Icon(
+                Icons.face,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerDocked,
+            bottomNavigationBar: GlobalBottomNav(
+              currentIndex: _currentIndex,
+              onTap: _onNavTap,
+            ),
+          ),
         ),
       ),
     );
@@ -78,194 +162,352 @@ class _HomePage extends StatelessWidget {
 
     // Calculate screen width to determine icon size
     final screenWidth = MediaQuery.of(context).size.width;
-    // Size for icons to fit approximately 4 across with spacing, but slightly smaller
-    final iconSize =
-        ((screenWidth - 80) / 4) * 0.85; // 85% of the size needed for exactly 4
+    // Size for icons to fit approximately 4 across with spacing - reduced by 15%
+    final iconSize = ((screenWidth - 80) / 4) * 0.80;
 
     return Scaffold(
-      // Remove AppBar
+      backgroundColor: AppColors.background,
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        toolbarHeight: 0,
-      ),
-      body: Column(
-        children: [
-          // Header dengan informasi pengguna dan statistik
-          const HomeHeader(),
-
-          // Menu container
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Menu items - first row (5 items)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Absensi menu item
-                      _buildSimpleMenuItem(
-                        context,
-                        title: 'Absensi',
-                        iconPath: 'assets/images/menu-absensi.png',
-                        iconSize:
-                            iconSize * 0.9, // Slightly smaller for 5 items
-                        onTap: () {
-                          _showAbsensiBottomSheet(context);
-                        },
-                      ),
-
-                      // Mata Kuliah menu item
-                      _buildSimpleMenuItem(
-                        context,
-                        title: 'Mata Kuliah',
-                        iconPath: 'assets/images/menu-matakuliah.png',
-                        iconSize: iconSize * 0.9,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Menu Mata Kuliah tapped')),
-                          );
-                        },
-                      ),
-
-                      // Riwayat menu item
-                      _buildSimpleMenuItem(
-                        context,
-                        title: 'Riwayat',
-                        iconPath: 'assets/images/menu-riwayat.png',
-                        iconSize: iconSize * 0.9,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Menu Riwayat tapped')),
-                          );
-                        },
-                      ),
-
-                      // Izin menu item
-                      _buildSimpleMenuItem(
-                        context,
-                        title: 'Izin',
-                        iconPath: 'assets/images/menu-izin.png',
-                        iconSize: iconSize * 0.9,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Menu Izin tapped')),
-                          );
-                        },
-                      ),
-
-                      // Jadwal menu item (placeholder)
-                      _buildSimpleMenuItem(
-                        context,
-                        title: 'Jadwal',
-                        iconPath:
-                            'assets/images/menu-riwayat.png', // Using existing icon as placeholder
-                        iconSize: iconSize * 0.9,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Menu Jadwal tapped')),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20), // Spacing between rows
-
-                  // Menu items - second row (5 items)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Profil menu item
-                      _buildSimpleMenuItem(
-                        context,
-                        title: 'Profil',
-                        iconPath:
-                            'assets/images/menu-absensi.png', // Using existing icon as placeholder
-                        iconSize: iconSize * 0.9,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Menu Profil tapped')),
-                          );
-                        },
-                      ),
-
-                      // Nilai menu item
-                      _buildSimpleMenuItem(
-                        context,
-                        title: 'Nilai',
-                        iconPath:
-                            'assets/images/menu-matakuliah.png', // Using existing icon as placeholder
-                        iconSize: iconSize * 0.9,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Menu Nilai tapped')),
-                          );
-                        },
-                      ),
-
-                      // Pengaturan menu item
-                      _buildSimpleMenuItem(
-                        context,
-                        title: 'Pengaturan',
-                        iconPath:
-                            'assets/images/menu-izin.png', // Using existing icon as placeholder
-                        iconSize: iconSize * 0.9,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Menu Pengaturan tapped')),
-                          );
-                        },
-                      ),
-
-                      // Notifikasi menu item
-                      _buildSimpleMenuItem(
-                        context,
-                        title: 'Notifikasi',
-                        iconPath:
-                            'assets/images/menu-riwayat.png', // Using existing icon as placeholder
-                        iconSize: iconSize * 0.9,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Menu Notifikasi tapped')),
-                          );
-                        },
-                      ),
-
-                      // Bantuan menu item
-                      _buildSimpleMenuItem(
-                        context,
-                        title: 'Bantuan',
-                        iconPath:
-                            'assets/images/menu-absensi.png', // Using existing icon as placeholder
-                        iconSize: iconSize * 0.9,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Menu Bantuan tapped')),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ],
+      appBar: null, // Remove AppBar to fix status bar issue
+      body: BlocBuilder<StudentBloc, StudentState>(
+        builder: (context, state) {
+          return Stack(
+            children: [
+              // Header with user information
+              const Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: HomeHeader(),
               ),
-            ),
-          ),
-        ],
+
+              // Content with rounded top corners
+              Positioned(
+                top: 140, // Return to original position
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(25),
+                    topRight: Radius.circular(25),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          spreadRadius: 0,
+                          offset: const Offset(0, -2),
+                        ),
+                      ],
+                    ),
+                    child: RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: () async {
+                        context
+                            .read<StudentBloc>()
+                            .add(const LoadStudentDataEvent());
+                      },
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 100),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Menu Grid - Improved layout
+                              Container(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 16, 20, 15),
+                                margin: const EdgeInsets.only(top: 0),
+                                decoration: const BoxDecoration(
+                                  color: Colors.transparent,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Horizontally scrollable menu row
+                                    Container(
+                                      height: iconSize +
+                                          30, // Adjusted for icon + text height
+                                      margin: const EdgeInsets.symmetric(
+                                          vertical: 10),
+                                      child: ListView(
+                                        scrollDirection: Axis.horizontal,
+                                        physics: const ClampingScrollPhysics(),
+                                        padding: EdgeInsets.zero,
+                                        children: [
+                                          // First item with left padding to match container
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: 20),
+                                            child: _buildMenuItem(
+                                              context,
+                                              title: 'Absensi',
+                                              iconPath:
+                                                  'assets/images/menu-absensi.png',
+                                              iconSize: iconSize,
+                                              onTap: () {
+                                                _showAbsensiBottomSheet(
+                                                    context);
+                                              },
+                                            ),
+                                          ),
+
+                                          // Mata Kuliah menu item
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: 20),
+                                            child: _buildMenuItem(
+                                              context,
+                                              title: 'Mata Kuliah',
+                                              iconPath:
+                                                  'assets/images/menu-matakuliah.png',
+                                              iconSize: iconSize,
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        const CourseListScreen(),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+
+                                          // Jadwal menu item
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: 20),
+                                            child: _buildMenuItem(
+                                              context,
+                                              title: 'Jadwal',
+                                              iconPath:
+                                                  'assets/images/menu-riwayat.png',
+                                              iconSize: iconSize,
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        const ScheduleScreen(),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+
+                                          // Riwayat menu item
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: 20),
+                                            child: _buildMenuItem(
+                                              context,
+                                              title: 'Riwayat',
+                                              iconPath:
+                                                  'assets/images/menu-riwayat.png',
+                                              iconSize: iconSize,
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        const AttendanceHistoryScreen(),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+
+                                          // Pengaturan menu item
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: 20),
+                                            child: _buildMenuItem(
+                                              context,
+                                              title: 'Pengaturan',
+                                              iconPath:
+                                                  'assets/images/menu-pengaturan.png',
+                                              iconSize: iconSize,
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        const SettingsScreen(),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Today's Class Section with improved UI
+                              Container(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.today,
+                                            color: AppColors.primary, size: 20),
+                                        const SizedBox(width: 8),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const TodaySchedulePage(),
+                                              ),
+                                            );
+                                          },
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                'Jadwal Kelas Hari Ini',
+                                                style: TextStyle(
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textPrimary,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Icon(
+                                                Icons.arrow_forward_ios,
+                                                size: 12,
+                                                color: AppColors.primary,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    if (_getTodayClasses().isEmpty)
+                                      _buildEmptyClassesMessage()
+                                    else
+                                      Column(
+                                        children: _getTodayClasses()
+                                            .map((classData) => _buildClassCard(
+                                                context, classData))
+                                            .toList(),
+                                      ),
+                                  ],
+                                ),
+                              ),
+
+                              // Recent Attendance Activity with improved UI
+                              Container(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.history_outlined,
+                                            color: AppColors.primary, size: 20),
+                                        const SizedBox(width: 8),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const AttendanceHistoryScreen(),
+                                              ),
+                                            );
+                                          },
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                'Riwayat Absensi Terakhir',
+                                                style: TextStyle(
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textPrimary,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Icon(
+                                                Icons.arrow_forward_ios,
+                                                size: 12,
+                                                color: AppColors.primary,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    if (_getRecentActivities().isEmpty)
+                                      _buildEmptyActivitiesMessage()
+                                    else
+                                      Column(
+                                        children: _getRecentActivities()
+                                            .map((activity) =>
+                                                _buildActivityCard(activity))
+                                            .toList(),
+                                      ),
+                                  ],
+                                ),
+                              ),
+
+                              // Today's Status Report with improved UI
+                              Container(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.assignment_outlined,
+                                            color: AppColors.primary, size: 20),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Status Hari Ini',
+                                          style: TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    _buildTodayStatusReport(),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  // Helper method to build simple menu items with just the icon and text
-  Widget _buildSimpleMenuItem(
+  // Helper method to build menu items with just the icon and text (keep original)
+  Widget _buildMenuItem(
     BuildContext context, {
     required String title,
     required String iconPath,
@@ -280,7 +522,468 @@ class _HomePage extends StatelessWidget {
     );
   }
 
-  // Method to show the Absensi bottom sheet
+  // Get today's classes data
+  List<Map<String, dynamic>> _getTodayClasses() {
+    return [
+      {
+        'title': 'Pemrograman Mobile',
+        'time': '08:00 - 10:30',
+        'room': 'Ruang 516',
+        'lecturer': 'Tegar Arifin Prasetyo, S.Si., M.Si.',
+        'status': 'Sedang Berlangsung',
+        'isActive': true,
+      },
+      {
+        'title': 'Aplikasi Terdistribusi dan Layanan Virtual',
+        'time': '13:00 - 15:30',
+        'room': 'Ruang 527',
+        'lecturer': 'Rudy Chandra, S.Kom., M.Kom',
+        'status': 'Akan Datang',
+        'isActive': false,
+      },
+    ];
+  }
+
+  // Empty classes message
+  Widget _buildEmptyClassesMessage() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      alignment: Alignment.center,
+      child: Text(
+        'Tidak ada kelas hari ini',
+        style: TextStyle(
+          fontSize: 12,
+          color: AppColors.textSecondary,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+    );
+  }
+
+  // Build class card - improved design
+  Widget _buildClassCard(BuildContext context, Map<String, dynamic> classData) {
+    return GestureDetector(
+      onTap: () {
+        // Navigate to today's schedule screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const TodaySchedulePage(),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              offset: const Offset(0, 1),
+              blurRadius: 3,
+              spreadRadius: 0,
+            ),
+          ],
+          border: Border.all(
+            color: classData['isActive'] as bool
+                ? AppColors.primary.withOpacity(0.3)
+                : Colors.grey.withOpacity(0.1),
+            width: classData['isActive'] as bool ? 1.5 : 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      classData['title'] as String,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: classData['isActive'] as bool
+                          ? AppColors.primary.withOpacity(0.08)
+                          : Colors.grey.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      classData['status'] as String,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w500,
+                        color: classData['isActive'] as bool
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time_rounded,
+                    size: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    classData['time'] as String,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    classData['room'] as String,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Row(
+                children: [
+                  Icon(
+                    Icons.person_outline,
+                    size: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    classData['lecturer'] as String,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              if (classData['isActive'] as bool) ...[
+                const SizedBox(height: 10),
+                const Divider(
+                    height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _showAbsensiBottomSheet(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    child: const Text('Absen Sekarang'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Get recent attendance activities
+  List<Map<String, dynamic>> _getRecentActivities() {
+    return [
+      {
+        'course': 'Pemrograman Mobile',
+        'date': '21 Mei 2024',
+        'time': '09:15',
+        'status': 'Hadir',
+        'method': 'Face Recognition',
+      },
+      {
+        'course': 'Aljabar Linier',
+        'date': '20 Mei 2024',
+        'time': '14:05',
+        'status': 'Terlambat',
+        'method': 'QR Code',
+      },
+      {
+        'course': 'Sistem Komputasi Awan',
+        'date': '19 Mei 2024',
+        'time': '10:30',
+        'status': 'Alpa',
+        'method': 'QR Code',
+      },
+    ];
+  }
+
+  // Empty activities message
+  Widget _buildEmptyActivitiesMessage() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      alignment: Alignment.center,
+      child: Text(
+        'Belum ada aktivitas absensi',
+        style: TextStyle(
+          fontSize: 12,
+          color: AppColors.textSecondary,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+    );
+  }
+
+  // Build activity card - improved design
+  Widget _buildActivityCard(Map<String, dynamic> activity) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, 1),
+            blurRadius: 3,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 32,
+              width: 32,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(
+                activity['method'] == 'QR Code'
+                    ? Icons.qr_code_scanner_rounded
+                    : Icons.face_outlined,
+                color: AppColors.primary,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    activity['course'] as String,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 10,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${activity['date']} · ${activity['time']}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: _getStatusColor(activity['status'] as String)
+                    .withOpacity(0.08),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                activity['status'] as String,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w500,
+                  color: _getStatusColor(activity['status'] as String),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper to get color based on status
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Hadir':
+        return AppColors.success;
+      case 'Terlambat':
+        return AppColors.warning;
+      case 'Alpa':
+        return AppColors.error;
+      default:
+        return AppColors.success;
+    }
+  }
+
+  // Today's status report - improved design
+  Widget _buildTodayStatusReport() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              offset: const Offset(0, 1),
+              blurRadius: 3,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle_outlined,
+                    color: AppColors.success,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '2 dari 4 kelas sudah dihadiri',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '1 kelas terlambat, 1 kelas alpa',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+            const SizedBox(height: 14),
+            // Attendance status counters with improved design
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildAttendanceCounter('2', 'Hadir', AppColors.primary),
+                Container(
+                  height: 28,
+                  width: 1,
+                  color: Colors.grey.withOpacity(0.2),
+                ),
+                _buildAttendanceCounter('1', 'Terlambat', AppColors.warning),
+                Container(
+                  height: 28,
+                  width: 1,
+                  color: Colors.grey.withOpacity(0.2),
+                ),
+                _buildAttendanceCounter('1', 'Alpa', AppColors.error),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper method for creating attendance counters
+  Widget _buildAttendanceCounter(String count, String label, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            count,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Improved bottom sheet method
   void _showAbsensiBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -290,7 +993,7 @@ class _HomePage extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.45,
+        height: MediaQuery.of(context).size.height * 0.42, // Adjusted height
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,7 +1001,7 @@ class _HomePage extends StatelessWidget {
             // Handle bar
             Center(
               child: Container(
-                margin: const EdgeInsets.only(bottom: 24),
+                margin: const EdgeInsets.only(bottom: 20),
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
@@ -309,16 +1012,26 @@ class _HomePage extends StatelessWidget {
             ),
 
             // Title
-            const Text(
-              'Pilih Metode Absensi',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF333333),
-              ),
+            Row(
+              children: [
+                Icon(
+                  Icons.how_to_reg,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Pilih Metode Absensi',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF333333),
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Content - two options
             Column(
@@ -331,12 +1044,7 @@ class _HomePage extends StatelessWidget {
                   description: 'Pindai kode QR untuk melakukan absensi',
                   onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Scan QR dipilih'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    ToastUtils.showInfoToast(context, 'Scan QR dipilih');
                   },
                 ),
 
@@ -352,10 +1060,11 @@ class _HomePage extends StatelessWidget {
                   description: 'Gunakan pengenalan wajah untuk absensi',
                   onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Face Recognition dipilih'),
-                        behavior: SnackBarBehavior.floating,
+                    // Navigate to course selection screen for face recognition
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CourseSelectionScreen(),
                       ),
                     );
                   },
@@ -387,8 +1096,8 @@ class _HomePage extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 icon,
@@ -403,18 +1112,18 @@ class _HomePage extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w500,
                       fontSize: 16,
-                      color: Color(0xFF333333),
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     description,
                     style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -422,7 +1131,7 @@ class _HomePage extends StatelessWidget {
             ),
             Icon(
               Icons.arrow_forward_ios,
-              color: Colors.grey[400],
+              color: AppColors.textLight,
               size: 16,
             ),
           ],
@@ -465,11 +1174,11 @@ class _PressableMenuItemState extends State<_PressableMenuItem>
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
     );
 
-    _shadowAnimation = Tween<double>(begin: 1.0, end: 0.3).animate(
+    _shadowAnimation = Tween<double>(begin: 1.0, end: 0.2).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
     );
   }
@@ -519,18 +1228,10 @@ class _PressableMenuItemState extends State<_PressableMenuItem>
                       // Bottom shadow - reduces when pressed
                       BoxShadow(
                         color: Colors.black
-                            .withOpacity(0.25 * _shadowAnimation.value),
-                        offset: Offset(0, 8 * _shadowAnimation.value),
-                        blurRadius: 12 * _shadowAnimation.value,
-                        spreadRadius: -4,
-                      ),
-                      // Side shadow - reduces when pressed
-                      BoxShadow(
-                        color: Colors.black
-                            .withOpacity(0.1 * _shadowAnimation.value),
-                        offset: Offset(5 * _shadowAnimation.value, 0),
-                        blurRadius: 8 * _shadowAnimation.value,
-                        spreadRadius: -5,
+                            .withOpacity(0.08 * _shadowAnimation.value),
+                        offset: Offset(0, 3 * _shadowAnimation.value),
+                        blurRadius: 5 * _shadowAnimation.value,
+                        spreadRadius: -1,
                       ),
                     ],
                   ),
@@ -546,15 +1247,16 @@ class _PressableMenuItemState extends State<_PressableMenuItem>
             },
           ),
 
-          const SizedBox(height: 2),
+          const SizedBox(height: 5),
 
           // Menu title text
           Text(
             widget.title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
             ),
           ),
         ],
@@ -563,13 +1265,12 @@ class _PressableMenuItemState extends State<_PressableMenuItem>
   }
 }
 
-// Widget halaman dummy untuk demo
+// Dummy page for placeholder tabs
 class _DummyPage extends StatelessWidget {
   final String title;
   final Color color;
 
   const _DummyPage({
-    super.key,
     required this.title,
     required this.color,
   });
@@ -579,65 +1280,14 @@ class _DummyPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        actions: [
-          // Logout button in AppBar
-          IconButton(
-            icon: const Icon(Iconsax.logout),
-            onPressed: () {
-              context.read<AuthBloc>().add(LogoutEvent());
-            },
-            tooltip: 'Logout',
-          ),
-        ],
+        backgroundColor: color,
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _getIconForTitle(title),
-              size: 80,
-              color: color.withOpacity(0.7),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Ini adalah halaman $title',
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-          ],
+        child: Text(
+          title,
+          style: const TextStyle(fontSize: 24),
         ),
       ),
     );
-  }
-
-  IconData _getIconForTitle(String title) {
-    switch (title) {
-      case 'Beranda':
-        return Iconsax.home;
-      case 'Jadwal':
-        return Iconsax.calendar;
-      case 'Scan Absensi':
-        return Iconsax.scan;
-      case 'Riwayat':
-        return Iconsax.clock;
-      case 'Profil':
-        return Iconsax.profile_circle;
-      default:
-        return Iconsax.info_circle;
-    }
   }
 }

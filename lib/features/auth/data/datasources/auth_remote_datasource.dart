@@ -55,9 +55,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         // Parse the response
         Map<String, dynamic> jsonResponse = json.decode(response.body);
 
-        // Check if authentication was successful
-        if (jsonResponse.containsKey('result') &&
-            jsonResponse['result'] == true) {
+        // Check if authentication was successful by examining the structure of the response
+        if (jsonResponse.containsKey('user') &&
+            jsonResponse.containsKey('token')) {
           // Campus auth API returns user object and token
           final user = jsonResponse['user'];
           final token = jsonResponse['token'];
@@ -93,8 +93,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           // Save username for display purposes
           await prefs.setString('username', username);
 
-          // Extract user ID
-          final userId = user['id'] ?? user['user_id'] ?? '';
+          // Extract user ID and external_user_id
+          final userId = user['id'] ?? '';
+          final externalUserId = user['external_user_id'] ?? 0;
+
+          // Save external_user_id for fetching student data
+          await prefs.setInt('external_user_id', externalUserId);
 
           // Create a proper response structure
           final userData = {
@@ -105,7 +109,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
               'user': {
                 'id': userId.toString(),
                 'username': username,
-                'name': user['username'] ?? 'User'
+                'name': user['username'] ?? 'User',
+                'external_user_id': externalUserId,
               }
             }
           };

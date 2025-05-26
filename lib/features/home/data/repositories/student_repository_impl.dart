@@ -2,26 +2,25 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/network/network_info.dart';
-import '../datasources/mahasiswa_remote_datasource.dart';
-import '../models/mahasiswa_model.dart';
-import '../../domain/repositories/mahasiswa_repository.dart';
+import '../datasources/student_remote_datasource.dart';
+import '../models/student_model.dart';
+import '../../domain/repositories/student_repository.dart';
 
-class MahasiswaRepositoryImpl implements MahasiswaRepository {
-  final MahasiswaRemoteDataSource remoteDataSource;
+class StudentRepositoryImpl implements StudentRepository {
+  final StudentRemoteDataSource remoteDataSource;
   final NetworkInfo networkInfo;
 
-  MahasiswaRepositoryImpl({
+  StudentRepositoryImpl({
     required this.remoteDataSource,
     required this.networkInfo,
   });
 
   @override
-  Future<Either<Failure, MahasiswaComplete>> getMahasiswaData(
-      int userId) async {
+  Future<Either<Failure, StudentComplete>> getStudentData(int userId) async {
     if (await networkInfo.isConnected) {
       try {
-        final mahasiswaData = await remoteDataSource.getMahasiswaData(userId);
-        return Right(mahasiswaData);
+        final studentData = await remoteDataSource.getStudentData(userId);
+        return Right(studentData);
       } on ServerException catch (e) {
         return Left(ServerFailure(message: e.message));
       } catch (e) {

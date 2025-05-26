@@ -1,4 +1,4 @@
-class MahasiswaInfo {
+class StudentInfo {
   final int dimId;
   final int userId;
   final String userName;
@@ -12,7 +12,7 @@ class MahasiswaInfo {
   final String status;
   final String asrama;
 
-  MahasiswaInfo({
+  StudentInfo({
     required this.dimId,
     required this.userId,
     required this.userName,
@@ -27,8 +27,8 @@ class MahasiswaInfo {
     required this.asrama,
   });
 
-  factory MahasiswaInfo.fromJson(Map<String, dynamic> json) {
-    return MahasiswaInfo(
+  factory StudentInfo.fromJson(Map<String, dynamic> json) {
+    return StudentInfo(
       dimId: json['dim_id'] ?? 0,
       userId: json['user_id'] ?? 0,
       userName: json['user_name'] ?? '',
@@ -45,7 +45,7 @@ class MahasiswaInfo {
   }
 }
 
-class MahasiswaDetail {
+class StudentDetail {
   final String nim;
   final String nama;
   final String email;
@@ -68,7 +68,7 @@ class MahasiswaDetail {
   final String noHpAyah;
   final String noHpIbu;
 
-  MahasiswaDetail({
+  StudentDetail({
     required this.nim,
     required this.nama,
     required this.email,
@@ -92,8 +92,8 @@ class MahasiswaDetail {
     required this.noHpIbu,
   });
 
-  factory MahasiswaDetail.fromJson(Map<String, dynamic> json) {
-    return MahasiswaDetail(
+  factory StudentDetail.fromJson(Map<String, dynamic> json) {
+    return StudentDetail(
       nim: json['nim'] ?? '',
       nama: json['nama'] ?? '',
       email: json['email'] ?? '',
@@ -119,19 +119,67 @@ class MahasiswaDetail {
   }
 }
 
-class MahasiswaComplete {
-  final MahasiswaInfo basicInfo;
-  final MahasiswaDetail details;
+class StudentComplete {
+  final StudentInfo basicInfo;
+  final StudentDetail details;
 
-  MahasiswaComplete({
+  StudentComplete({
     required this.basicInfo,
     required this.details,
   });
 
-  factory MahasiswaComplete.fromJson(Map<String, dynamic> json) {
-    return MahasiswaComplete(
-      basicInfo: MahasiswaInfo.fromJson(json['basic_info']),
-      details: MahasiswaDetail.fromJson(json['details']),
-    );
+  factory StudentComplete.fromJson(Map<String, dynamic> json) {
+    // Check if we have the nested structure or the flat structure
+    if (json.containsKey('basic_info') && json.containsKey('details')) {
+      // Old format with nested objects
+      return StudentComplete(
+        basicInfo: StudentInfo.fromJson(json['basic_info']),
+        details: StudentDetail.fromJson(json['details']),
+      );
+    } else {
+      // New format with flat object - convert to StudentInfo and create a default StudentDetail
+      return StudentComplete(
+        basicInfo: StudentInfo(
+          dimId: json['dim_id'] ?? 0,
+          userId: json['user_id'] ?? 0,
+          userName: json['user_name'] ?? '',
+          nim: json['nim'] ?? '',
+          nama: json['full_name'] ?? '', // Map full_name to nama
+          email: json['email'] ?? '',
+          prodiId:
+              json['study_program_id'] ?? 0, // Map study_program_id to prodiId
+          prodiName:
+              json['study_program'] ?? '', // Map study_program to prodiName
+          fakultas: json['faculty'] ?? '', // Map faculty to fakultas
+          angkatan: json['year_enrolled'] ?? 0, // Map year_enrolled to angkatan
+          status: json['status'] ?? '',
+          asrama: json['dormitory'] ?? '', // Map dormitory to asrama
+        ),
+        details: StudentDetail(
+          nim: json['nim'] ?? '',
+          nama: json['full_name'] ?? '',
+          email: json['email'] ?? '',
+          tempatLahir:
+              '', // Default value - this data isn't available in the new API response
+          tglLahir: '',
+          jenisKelamin: '',
+          alamat: '',
+          hp: '',
+          prodi: json['study_program'] ?? '',
+          fakultas: json['faculty'] ?? '',
+          sem: 0, // Default value
+          semTa: 0,
+          ta: '',
+          tahunMasuk: json['year_enrolled'] ?? 0,
+          kelas: '',
+          dosenWali: '',
+          asrama: json['dormitory'] ?? '',
+          namaAyah: '',
+          namaIbu: '',
+          noHpAyah: '',
+          noHpIbu: '',
+        ),
+      );
+    }
   }
 }

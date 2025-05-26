@@ -1,38 +1,39 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:http/http.dart' as http;
-import '../models/mahasiswa_model.dart';
+import '../models/student_model.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../core/utils/api_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-abstract class MahasiswaRemoteDataSource {
-  Future<MahasiswaComplete> getMahasiswaData(int userId);
+abstract class StudentRemoteDataSource {
+  Future<StudentComplete> getStudentData(int userId);
 }
 
-class MahasiswaRemoteDataSourceImpl implements MahasiswaRemoteDataSource {
+class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   final http.Client client;
   final SharedPreferences sharedPreferences;
 
-  MahasiswaRemoteDataSourceImpl({
+  StudentRemoteDataSourceImpl({
     required this.client,
     required this.sharedPreferences,
   });
 
   @override
-  Future<MahasiswaComplete> getMahasiswaData(int userId) async {
-    final token = sharedPreferences.getString('token');
+  Future<StudentComplete> getStudentData(int userId) async {
+    final token = sharedPreferences.getString('auth_token');
     if (token == null) {
       ApiLogger.logError(
-        'getMahasiswaData',
+        'getStudentData',
         'Token not found in SharedPreferences',
         null,
       );
       throw ServerException('Token not found');
     }
 
-    final url = Uri.parse(
-        '${ApiConstants.baseUrl}/api/v1/mahasiswa/complete?user_id=$userId');
+    final url =
+        Uri.parse('${ApiConstants.baseUrl}/api/students/by-user-id/$userId');
 
     try {
       // Log the request
@@ -41,7 +42,8 @@ class MahasiswaRemoteDataSourceImpl implements MahasiswaRemoteDataSource {
         url: url.toString(),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${token.substring(0, 10)}...',
+          'Authorization':
+              'Bearer ${token.substring(0, math.min(10, token.length))}...',
         },
       );
 
@@ -68,9 +70,8 @@ class MahasiswaRemoteDataSourceImpl implements MahasiswaRemoteDataSource {
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
 
-        if (jsonResponse['status'] == 'success' &&
-            jsonResponse.containsKey('data')) {
-          return MahasiswaComplete.fromJson(jsonResponse['data']);
+        if (jsonResponse.containsKey('data')) {
+          return StudentComplete.fromJson(jsonResponse['data']);
         } else {
           final errorMessage =
               jsonResponse['message'] ?? 'Failed to get student data';
